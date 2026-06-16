@@ -15,11 +15,8 @@
     <!-- Babel -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     
-    <!-- Lucide Icons -->
-    <script src="https://unpkg.com/lucide@latest"></script>
-    
-    <!-- Framer Motion (Bản 10 ổn định) -->
-    <script src="https://unpkg.com/framer-motion@10.16.4/dist/framer-motion.js"></script>
+    <!-- Lucide Icons React -->
+    <script src="https://unpkg.com/lucide-react"></script>
 
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
@@ -64,37 +61,33 @@
     <script type="text/babel">
         const { useState, useEffect, useRef } = React;
         
-        // Fallback an toàn nếu Framer Motion bị chặn hoặc lỗi tải
-        const motion = window.Motion ? window.Motion.motion : {
-            div: "div", span: "span", p: "p", h2: "h2", h3: "h3", h4: "h4"
+        // Loại bỏ các prop của framer-motion để tránh React quăng warning
+        const stripProps = ({ initial, animate, exit, transition, ...props }) => props;
+        
+        // Fallback an toàn cho Framer Motion
+        const motion = {
+            div: (props) => <div {...stripProps(props)} />,
+            span: (props) => <span {...stripProps(props)} />,
+            p: (props) => <p {...stripProps(props)} />,
+            h2: (props) => <h2 {...stripProps(props)} />,
+            h3: (props) => <h3 {...stripProps(props)} />,
+            h4: (props) => <h4 {...stripProps(props)} />
         };
-        const AnimatePresence = window.Motion ? window.Motion.AnimatePresence : ({children}) => <>{children}</>;
+        const AnimatePresence = ({children}) => <>{children}</>;
 
         // CẤU HÌNH ĐƯỜNG LINK GOOGLE APP SCRIPT
         const API_URL = "https://script.google.com/macros/s/AKfycbwl7gLGLcemZOI8DX6M472D7WpDOyawTF2Ih1Wk_Gqp5lRs69SYZRVcPXNkl4_Mox6f/exec";
 
-        // Component Icon
+        // Component Icon sử dụng thư viện lucide-react
         const Icon = ({ name, size = 20, className = "" }) => {
-            const elRef = useRef(null);
-            useEffect(() => {
-                if (elRef.current && window.lucide) {
-                    elRef.current.innerHTML = '';
-                    const parts = name.split('-');
-                    const camelName = parts.map(p => p.charAt(0).toUpperCase() + p.slice(1)).join('');
-                    const iconMeta = window.lucide.icons[camelName] || window.lucide.icons[name] || window.lucide.icons['HelpCircle'];
-                    if (iconMeta) {
-                        const node = document.createElement('div');
-                        node.innerHTML = iconMeta.toSvg({
-                            width: size,
-                            height: size,
-                            class: className,
-                            'stroke-width': 2
-                        });
-                        elRef.current.appendChild(node.firstChild);
-                    }
-                }
-            }, [name, size, className]);
-            return <span ref={elRef} className={`inline-flex items-center justify-center ${className}`} />;
+            if (!window.LucideReact) return null;
+            
+            const parts = name.split('-');
+            const camelName = parts.map(p => p.charAt(0).toUpperCase() + p.slice(1)).join('');
+            
+            const IconComponent = window.LucideReact[camelName] || window.LucideReact.HelpCircle;
+            
+            return <IconComponent size={size} className={className} strokeWidth={2} />;
         };
 
         const FooterCredit = () => (
@@ -398,7 +391,7 @@
                                                 return (
                                                     <label key={opt} className={`flex items-start gap-3.5 p-4 rounded-xl border transition-all cursor-pointer relative group/opt ${isChecked ? 'bg-indigo-500/10 border-indigo-500/40 text-indigo-300' : 'bg-slate-950/40 border-slate-800/50 hover:bg-slate-900/40 text-slate-400 hover:text-slate-300'}`}>
                                                         <input type="radio" name={`q-${qId}`} checked={isChecked} onChange={() => handleSelectOption(qId, opt)} className="sr-only" />
-                                                        <span className={`w-5.5 h-5.5 rounded-full border flex items-center justify-center text-xs font-black shrink-0 transition-all ${isChecked ? 'bg-gradient-to-tr from-indigo-500 to-violet-600 border-transparent text-white scale-105 shadow-md shadow-indigo-500/20' : 'border-slate-700 bg-slate-900 group-hover/opt:border-slate-500 text-slate-400 group-hover/opt:text-slate-200'}`}>{opt}</span>
+                                                        <span className={`w-6 h-6 rounded-full border flex items-center justify-center text-xs font-black shrink-0 transition-all ${isChecked ? 'bg-gradient-to-tr from-indigo-500 to-violet-600 border-transparent text-white scale-105 shadow-md shadow-indigo-500/20' : 'border-slate-700 bg-slate-900 group-hover/opt:border-slate-500 text-slate-400 group-hover/opt:text-slate-200'}`}>{opt}</span>
                                                         <span className="text-sm leading-snug font-medium pt-0.5">{optText}</span>
                                                     </label>
                                                 );
