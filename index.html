@@ -5,17 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Hệ Thống Kiểm Tra Trực Tuyến Học Sinh</title>
     
-    <!-- Dùng Tailwind CSS v3 ổn định thay vì v4 -->
     <script src="https://cdn.tailwindcss.com"></script>
     
-    <!-- React & ReactDOM -->
     <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
     
-    <!-- Babel -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     
-    <!-- Lucide Icons React -->
     <script src="https://unpkg.com/lucide-react"></script>
 
     <style>
@@ -39,7 +35,6 @@
         }
     </style>
 
-    <!-- BẮT LỖI MÀN HÌNH TRẮNG -->
     <script>
         window.onerror = function(message, source, lineno, colno, error) {
             document.getElementById('root').style.display = 'none';
@@ -61,30 +56,32 @@
     <script type="text/babel">
         const { useState, useEffect, useRef } = React;
         
-        // Loại bỏ các prop của framer-motion để tránh React quăng warning
-        const stripProps = ({ initial, animate, exit, transition, ...props }) => props;
+        // Hàm lọc sạch các prop animation (tránh lỗi quăng vào thẻ DOM gốc)
+        const stripMotionProps = ({ initial, animate, exit, transition, ...props }) => props;
         
-        // Fallback an toàn cho Framer Motion
+        // Render an toàn thay thế cho Framer Motion không cần CDN phụ thuộc bên ngoài
         const motion = {
-            div: (props) => <div {...stripProps(props)} />,
-            span: (props) => <span {...stripProps(props)} />,
-            p: (props) => <p {...stripProps(props)} />,
-            h2: (props) => <h2 {...stripProps(props)} />,
-            h3: (props) => <h3 {...stripProps(props)} />,
-            h4: (props) => <h4 {...stripProps(props)} />
+            div: (props) => <div {...stripMotionProps(props)} />,
+            span: (props) => <span {...stripMotionProps(props)} />,
+            p: (props) => <p {...stripMotionProps(props)} />,
+            h2: (props) => <h2 {...stripMotionProps(props)} />,
+            h3: (props) => <h3 {...stripMotionProps(props)} />,
+            h4: (props) => <h4 {...stripMotionProps(props)} />
         };
         const AnimatePresence = ({children}) => <>{children}</>;
 
         // CẤU HÌNH ĐƯỜNG LINK GOOGLE APP SCRIPT
         const API_URL = "https://script.google.com/macros/s/AKfycbwl7gLGLcemZOI8DX6M472D7WpDOyawTF2Ih1Wk_Gqp5lRs69SYZRVcPXNkl4_Mox6f/exec";
 
-        // Component Icon sử dụng thư viện lucide-react
+        // Component Icon ánh xạ chuẩn xác từ bộ thư viện LucideReact toàn cục
         const Icon = ({ name, size = 20, className = "" }) => {
             if (!window.LucideReact) return null;
             
+            // Chuyển đổi tên từ dạng "graduation-cap" thành "GraduationCap"
             const parts = name.split('-');
             const camelName = parts.map(p => p.charAt(0).toUpperCase() + p.slice(1)).join('');
             
+            // Lấy component tương ứng, nếu không tìm thấy sẽ lấy icon HelpCircle làm mặc định
             const IconComponent = window.LucideReact[camelName] || window.LucideReact.HelpCircle;
             
             return <IconComponent size={size} className={className} strokeWidth={2} />;
@@ -139,12 +136,7 @@
                     <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-indigo-500/10 rounded-full blur-[120px] pointer-events-none"></div>
                     <div className="absolute bottom-0 right-1/4 w-[400px] h-[400px] bg-emerald-500/5 rounded-full blur-[100px] pointer-events-none"></div>
                     
-                    <motion.div 
-                        initial={{ opacity: 0, y: -20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.5 }}
-                        className="sm:mx-auto sm:w-full sm:max-w-md relative z-10"
-                    >
+                    <motion.div className="sm:mx-auto sm:w-full sm:max-w-md relative z-10">
                         <div className="flex justify-center">
                             <div className="h-14 w-14 bg-gradient-to-tr from-indigo-500 to-violet-600 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-500/30 ring-4 ring-slate-800/50">
                                 <Icon name="graduation-cap" size={28} className="text-white"/>
@@ -154,21 +146,11 @@
                         <p className="mt-2 text-center text-sm text-slate-400">Vui lòng sử dụng tài khoản được giáo viên cung cấp</p>
                     </motion.div>
 
-                    <motion.div 
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.5, delay: 0.1 }}
-                        className="mt-8 sm:mx-auto sm:w-full sm:max-w-md relative z-10"
-                    >
+                    <motion.div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md relative z-10">
                         <div className="bg-slate-900/60 backdrop-blur-xl py-8 px-4 border border-slate-800/80 shadow-2xl sm:rounded-2xl sm:px-10">
                             <AnimatePresence mode="wait">
                                 {error && (
-                                    <motion.div 
-                                        initial={{ opacity: 0, height: 0 }}
-                                        animate={{ opacity: 1, height: 'auto' }}
-                                        exit={{ opacity: 0, height: 0 }}
-                                        className="mb-4 p-3 bg-rose-500/10 border border-rose-500/20 text-rose-400 rounded-xl text-sm flex items-center gap-2"
-                                    >
+                                    <motion.div className="mb-4 p-3 bg-rose-500/10 border border-rose-500/20 text-rose-400 rounded-xl text-sm flex items-center gap-2">
                                         <Icon name="alert-triangle" size={16} className="shrink-0" />
                                         <span>{error}</span>
                                     </motion.div>
@@ -233,11 +215,7 @@
 
             return (
                 <div className="max-w-5xl mx-auto px-4 py-12 relative z-10">
-                    <motion.div 
-                        initial={{ opacity: 0, y: -20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="bg-gradient-to-r from-slate-900 via-indigo-950/30 to-slate-900 border border-slate-800/80 rounded-2xl p-6 md:p-8 flex flex-col md:flex-row md:items-center md:justify-between gap-6 shadow-xl mb-10 relative overflow-hidden"
-                    >
+                    <motion.div className="bg-gradient-to-r from-slate-900 via-indigo-950/30 to-slate-900 border border-slate-800/80 rounded-2xl p-6 md:p-8 flex flex-col md:flex-row md:items-center md:justify-between gap-6 shadow-xl mb-10 relative overflow-hidden">
                         <div className="absolute top-0 right-0 w-[300px] h-[300px] bg-indigo-500/5 rounded-full blur-[80px] pointer-events-none"></div>
                         <div className="flex items-center gap-4">
                             <div className="h-16 w-16 bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 rounded-2xl flex items-center justify-center shrink-0">
@@ -266,7 +244,7 @@
                     </div>
                     
                     {loading ? (
-                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="bg-slate-900/20 border border-slate-800/40 rounded-2xl p-16 text-center text-slate-500 font-medium text-sm shadow-inner">
+                        <motion.div className="bg-slate-900/20 border border-slate-800/40 rounded-2xl p-16 text-center text-slate-500 font-medium text-sm shadow-inner">
                             <Icon name="loader" size={24} className="animate-spin mb-3 text-slate-600 block mx-auto" />
                             Đang đồng bộ dữ liệu...
                         </motion.div>
@@ -279,9 +257,6 @@
                                 return (
                                     <motion.div 
                                         key={exam.id || idx}
-                                        initial={{ opacity: 0, y: 20 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        transition={{ delay: idx * 0.05 }}
                                         className="bg-slate-900/40 backdrop-blur-md border border-slate-800/80 rounded-2xl p-6 shadow-lg hover:border-indigo-500/40 transition-all flex flex-col justify-between group relative overflow-hidden"
                                     >
                                         <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-indigo-500 to-violet-600 opacity-0 group-hover:opacity-100 transition-opacity"></div>
@@ -374,9 +349,6 @@
                                     <motion.div 
                                         key={qId} 
                                         id={`q-block-${qId}`}
-                                        initial={{ opacity: 0, x: -10 }}
-                                        animate={{ opacity: 1, x: 0 }}
-                                        transition={{ delay: Math.min(index * 0.05, 0.5) }}
                                         className="bg-slate-900/30 border border-slate-800/60 p-6 rounded-2xl shadow-sm space-y-5 relative overflow-hidden"
                                     >
                                         <div className="flex items-start gap-4">
@@ -469,11 +441,7 @@
             return (
                 <div className="max-w-5xl mx-auto px-4 py-12 relative z-10">
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
-                        <motion.div 
-                            initial={{ opacity: 0, scale: 0.95 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            className="md:col-span-1 bg-slate-900/60 border border-slate-800/80 p-6 rounded-2xl text-center shadow-xl backdrop-blur-md relative overflow-hidden"
-                        >
+                        <motion.div className="md:col-span-1 bg-slate-900/60 border border-slate-800/80 p-6 rounded-2xl text-center shadow-xl backdrop-blur-md relative overflow-hidden">
                             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-500 to-teal-400"></div>
                             <div className="inline-flex h-12 w-12 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-xl items-center justify-center mb-4 shadow-inner">
                                 <Icon name="check-circle" size={24}/>
@@ -491,12 +459,7 @@
                             </div>
                         </motion.div>
 
-                        <motion.div 
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: 0.1 }}
-                            className="md:col-span-2 bg-slate-900/60 border border-slate-800/80 rounded-2xl shadow-xl backdrop-blur-md overflow-hidden relative"
-                        >
+                        <motion.div className="md:col-span-2 bg-slate-900/60 border border-slate-800/80 rounded-2xl shadow-xl backdrop-blur-md overflow-hidden relative">
                             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-500 to-violet-500"></div>
                             <div className="p-5 border-b border-slate-800/80 bg-slate-900/40 flex items-center gap-2">
                                 <Icon name="trophy" size={18} className="text-amber-400" />
@@ -612,22 +575,22 @@
                 <div className="min-h-[100dvh] w-full relative">
                     <AnimatePresence mode="wait">
                         {view === 'auth' && (
-                            <motion.div key="auth" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                            <motion.div key="auth">
                                 <AuthView onLoginSuccess={handleLoginSuccess} />
                             </motion.div>
                         )}
                         {view === 'lobby' && (
-                            <motion.div key="lobby" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                            <motion.div key="lobby">
                                 <LobbyView user={user} onLogout={handleLogout} onSelectExam={handleSelectExam} />
                             </motion.div>
                         )}
                         {view === 'exam' && (
-                            <motion.div key="exam" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                            <motion.div key="exam">
                                 <ExamView user={user} exam={selectedExam} onExamSubmit={handleExamSubmit} />
                             </motion.div>
                         )}
                         {view === 'result' && (
-                            <motion.div key="result" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                            <motion.div key="result">
                                 <ResultView user={user} exam={selectedExam} resultData={resultData} onBackToLobby={() => setView('lobby')} />
                             </motion.div>
                         )}
