@@ -7,12 +7,13 @@
 
 <script src="https://cdn.tailwindcss.com"></script>
 
-<script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
-<script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+
+<script src="https://unpkg.com/lucide-react@0.292.0/dist/umd/lucide-react.min.js"></script>
 
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
-<script src="https://unpkg.com/lucide-react@0.292.0/dist/umd/lucide-react.min.js"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 body { font-family: 'Inter', sans-serif; }
@@ -34,7 +35,9 @@ position: relative;
 }
 </style>
 <script>
+// Khai báo duy nhất 1 lần tại đây để toàn hệ thống sử dụng chung
 const API_URL = "https://script.google.com/macros/s/AKfycbyVERzEfEK7t_Hp6PpWZYodTN-o7t4omX6W69p2Hn7URj71agiiKgvs_b954aiNMfn_/exec";
+
 window.onerror = function(message, source, lineno, colno, error) {
 document.getElementById('root').style.display = 'none';
 var errorDiv = document.getElementById('error-log');
@@ -51,7 +54,8 @@ return true;
 
 <div id="error-log"></div>
 <div id="root"></div>
-<script type="text/babel">
+
+<script type="text/babel" data-presets="react">
 const { useState, useEffect, useRef } = React;
 
 // Hàm lọc sạch các prop animation (tránh lỗi quăng vào thẻ DOM gốc)
@@ -67,9 +71,6 @@ h3: (props) => <h3 {...stripMotionProps(props)} />,
 h4: (props) => <h4 {...stripMotionProps(props)} />
 };
 const AnimatePresence = ({children}) => <>{children}</>;
-
-// CẤU HÌNH ĐƯỜNG LINK GOOGLE APP SCRIPT
-const API_URL = "https://script.google.com/macros/s/AKfycbyVERzEfEK7t_Hp6PpWZYodTN-o7t4omX6W69p2Hn7URj71agiiKgvs_b954aiNMfn_/exec";
 
 // Component Icon ánh xạ chuẩn xác từ bộ thư viện LucideReact toàn cục
 const Icon = ({ name, size = 20, className = "" }) => {
