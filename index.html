@@ -53,9 +53,9 @@ body {
 
 <script>
 // ==========================================
-// DÁN ĐƯỜNG LINK WEB APP ADMIN CỦA BẠN VÀO ĐÂY
+// DÁN ĐƯỜNG LINK WEB APP CỦA BẠN VÀO ĐÂY
 // ==========================================
-const API_URL = "https://script.google.com/macros/s/AKfycbyfElu762bowwlSMwB2opPi1YALh59HQk9gZ90E55n1en56mtb402oLT0590MBVN7ye/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbyVERzEfEK7t_Hp6PpWZYodTN-o7t4omX6W69p2Hn7URj71agiiKgvs_b954aiNMfn_/exec";
 </script>
 </head>
 <body>
@@ -85,16 +85,19 @@ const FooterCredit = () => (
 // --- 1. MÀN HÌNH ĐĂNG NHẬP ---
 const AuthView = ({ onLoginSuccess, setUser, setView }) => {
     const [isLoading, setIsLoading] = useState(false);
+    // Đã thay đổi: Dùng state để quản lý dữ liệu form an toàn 100%
+    const [username, setUsername] = useState('');
+    const [password, setPassword] = useState('');
 
     const handleLoginSubmit = async (e) => {
         e.preventDefault();
         setIsLoading(true);
-        const username = e.target.u.value;
-        const password = e.target.p.value;
 
         try {
             const res = await fetch(`${API_URL}?action=login`, {
-                method: 'POST', body: JSON.stringify({username, password})
+                method: 'POST', 
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // Đã thêm giấy thông hành CORS
+                body: JSON.stringify({username, password})
             });
             const data = await res.json();
             if(data.success) {
@@ -114,13 +117,14 @@ const AuthView = ({ onLoginSuccess, setUser, setView }) => {
                     <form onSubmit={handleLoginSubmit} className="space-y-4 md:space-y-5">
                         <div>
                             <label className="block text-sm font-semibold text-slate-300 mb-2">Tài khoản (SBD)</label>
-                            <input name="u" required className="w-full p-4 bg-slate-800 border border-slate-700 rounded-xl outline-none focus:border-indigo-500 text-white" placeholder="Nhập mã định danh..." />
+                            <input value={username} onChange={(e) => setUsername(e.target.value)} required className="w-full p-4 bg-slate-800 border border-slate-700 rounded-xl outline-none focus:border-indigo-500 text-white" placeholder="Nhập mã định danh..." />
                         </div>
                         <div>
                             <label className="block text-sm font-semibold text-slate-300 mb-2">Mật khẩu</label>
-                            <input name="p" type="password" required className="w-full p-4 bg-slate-800 border border-slate-700 rounded-xl outline-none focus:border-indigo-500 text-white" placeholder="Nhập mật khẩu..." />
+                            <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required className="w-full p-4 bg-slate-800 border border-slate-700 rounded-xl outline-none focus:border-indigo-500 text-white" placeholder="Nhập mật khẩu..." />
                         </div>
-                        <button type="submit" disabled={isLoading} className="w-full bg-indigo-600 hover:bg-indigo-500 py-4 rounded-xl font-bold uppercase tracking-wider transition-colors mt-2 disabled:opacity-50">
+                        <button type="submit" disabled={isLoading} className="w-full bg-indigo-600 hover:bg-indigo-500 py-4 rounded-xl font-bold uppercase tracking-wider transition-colors mt-2 disabled:opacity-50 flex items-center justify-center gap-2">
+                            {isLoading ? <Icon name="loader" size={18} className="animate-spin" /> : null}
                             {isLoading ? 'Đang xác thực...' : 'Vào hệ thống'}
                         </button>
                     </form>
@@ -173,7 +177,7 @@ const LobbyView = ({ user, onLogout, onSelectExam }) => {
             </header>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 flex-1 content-start">
                 {loading ? (
-                    <div className="col-span-full text-center py-20 text-slate-500"><Icon name="loader" size={24} className="animate-spin mb-2" /> Đang đồng bộ...</div>
+                    <div className="col-span-full text-center py-20 text-slate-500"><Icon name="loader" size={24} className="animate-spin mb-2 mx-auto" /> Đang đồng bộ...</div>
                 ) : exams.length > 0 ? exams.map(exam => {
                     const cfg = exam.questions || {};
                     const open = isExamOpen(cfg);
@@ -297,7 +301,7 @@ const ExamView = ({ user, exam, onExamSubmit }) => {
             </header>
 
             <div className="flex-1 flex overflow-hidden relative">
-                {/* BÊN TRÁI: ĐỀ THI PDF (Iframe thay vì pdf.js để tương thích GDrive) */}
+                {/* BÊN TRÁI: ĐỀ THI PDF */}
                 <div className="flex-1 h-full w-full relative z-10 bg-[#1e1e1e] p-2 md:p-6 pdf-container">
                     {pdfUrl ? (
                         <iframe src={pdfUrl} allow="autoplay" className="w-full h-full rounded-xl shadow-2xl"></iframe>
@@ -329,7 +333,7 @@ const ExamView = ({ user, exam, onExamSubmit }) => {
                         {/* PHẦN I */}
                         {p1Questions.length > 0 && (
                             <div className="mb-6">
-                                <h4 className="text-xs font-bold text-indigo-400 uppercase tracking-wider mb-3">Phần I: Trắc nghiệm nhiều lựa chọn</h4>
+                                <h4 className="text-xs font-bold text-indigo-400 uppercase tracking-wider mb-3">Phần I: Trắc nghiệm</h4>
                                 <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-4 xl:grid-cols-5 gap-2">
                                     {p1Questions.map((qNum) => {
                                         const isFlagged = flaggedQuestions[`p1_${qNum}`];
@@ -352,7 +356,7 @@ const ExamView = ({ user, exam, onExamSubmit }) => {
                         {/* PHẦN II */}
                         {p2Questions.length > 0 && (
                             <div className="mb-6">
-                                <h4 className="text-xs font-bold text-amber-400 uppercase tracking-wider mb-3">Phần II: Trắc nghiệm Đúng/Sai</h4>
+                                <h4 className="text-xs font-bold text-amber-400 uppercase tracking-wider mb-3">Phần II: Đúng/Sai</h4>
                                 <div className="space-y-3">
                                     {p2Questions.map((qNum) => {
                                         const isFlagged = flaggedQuestions[`p2_${qNum}`];
@@ -383,7 +387,7 @@ const ExamView = ({ user, exam, onExamSubmit }) => {
                         {/* PHẦN III */}
                         {p3Questions.length > 0 && (
                             <div className="mb-6">
-                                <h4 className="text-xs font-bold text-emerald-400 uppercase tracking-wider mb-3">Phần III: Trả lời ngắn</h4>
+                                <h4 className="text-xs font-bold text-emerald-400 uppercase tracking-wider mb-3">Phần III: Điền ngắn</h4>
                                 <div className="space-y-2">
                                     {p3Questions.map((qNum) => {
                                         const isFlagged = flaggedQuestions[`p3_${qNum}`];
@@ -400,8 +404,8 @@ const ExamView = ({ user, exam, onExamSubmit }) => {
                         )}
                     </div>
                     <div className="p-4 bg-slate-900/50 border-t border-slate-800 flex items-center justify-between gap-4 shrink-0">
-                        <button onClick={() => setIsMobileSheetOpen(false)} className="flex-1 md:hidden bg-slate-800 hover:bg-slate-700 py-3 rounded-xl font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 text-slate-300"><Icon name="chevron-down" size={14}/>Đóng lại</button>
-                        <button onClick={() => handleSubmit(false)} className="flex-1 bg-indigo-600 hover:bg-indigo-500 py-3 rounded-xl font-bold text-xs md:text-sm uppercase tracking-wider transition-colors shadow-lg shadow-indigo-600/20">Nộp bài làm</button>
+                        <button onClick={() => setIsMobileSheetOpen(false)} className="flex-1 md:hidden bg-slate-800 hover:bg-slate-700 py-3 rounded-xl font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 text-slate-300"><Icon name="chevron-down" size={14}/>Đóng</button>
+                        <button onClick={() => handleSubmit(false)} className="flex-1 bg-indigo-600 hover:bg-indigo-500 py-3 rounded-xl font-bold text-xs md:text-sm uppercase tracking-wider transition-colors shadow-lg shadow-indigo-600/20">Nộp bài</button>
                     </div>
                 </aside>
             </div>
@@ -430,7 +434,6 @@ const ResultView = ({ user, exam, resultData, leaderboard, onBackToLobby }) => {
                     <div className="glass-panel p-4 rounded-xl text-center"><p className="text-xs text-slate-400 font-medium mb-1 uppercase">Vi phạm</p><p className="text-xl md:text-3xl font-black text-rose-400">{resultData.cheat}</p></div>
                 </div>
 
-                {/* CHI TIẾT ĐÁP ÁN (Khách không được xem) */}
                 {user.role === 'student' ? (
                     <div className="mt-8 border-t border-slate-800 pt-8">
                         <h3 className="text-xl font-bold mb-6 text-white uppercase tracking-tight flex items-center gap-2"><Icon name="check-square" className="text-indigo-400"/> Chi tiết đáp án</h3>
@@ -526,7 +529,6 @@ const ResultView = ({ user, exam, resultData, leaderboard, onBackToLobby }) => {
                 )}
             </div>
 
-            {/* BẢNG XẾP HẠNG */}
             <div className="mt-10 glass-panel p-6 rounded-2xl">
                 <h3 className="text-lg font-bold mb-4 uppercase text-indigo-400 flex items-center gap-2"><Icon name="trophy" /> Bảng xếp hạng đề thi</h3>
                 <div className="overflow-x-auto">
@@ -545,9 +547,9 @@ const ResultView = ({ user, exam, resultData, leaderboard, onBackToLobby }) => {
                                 return (
                                     <tr key={index} className={`transition-colors ${isCurrentUser ? 'bg-indigo-600/10 text-indigo-300 font-medium' : 'hover:bg-slate-800/30'}`}>
                                         <td className="py-3 px-4">
-                                            {index === 0 && <span className="text-amber-400 font-bold"> 🥇 1</span>}
-                                            {index === 1 && <span className="text-slate-400 font-bold"> 🥈 2</span>}
-                                            {index === 2 && <span className="text-amber-600 font-bold"> 🥉 3</span>}
+                                            {index === 0 && <span className="text-amber-400 font-bold">🥇 1</span>}
+                                            {index === 1 && <span className="text-slate-400 font-bold">🥈 2</span>}
+                                            {index === 2 && <span className="text-amber-600 font-bold">🥉 3</span>}
                                             {index > 2 && `${index + 1}`}
                                         </td>
                                         <td className="py-3 px-4">
@@ -571,7 +573,7 @@ const ResultView = ({ user, exam, resultData, leaderboard, onBackToLobby }) => {
 };
 
 // ==========================================
-// APP MAIN BỌC GIAO DIỆN
+// APP MAIN
 // ==========================================
 const App = () => {
     const [view, setView] = useState('auth');
@@ -581,7 +583,6 @@ const App = () => {
     const [leaderboard, setLeaderboard] = useState([]);
 
     const handleExamSubmit = async (studentAnswers, cheatCount, exam) => {
-        // TÍNH ĐIỂM CHUẨN FORM 2025 BỘ GD&ĐT
         const cfg = exam.questions || {};
         const key = exam.answers || { p1: {}, p2: {}, p3: {} };
         
@@ -595,7 +596,7 @@ const App = () => {
                 studentRawScore += 0.25; correctP1++;
             }
         }
-        // Chấm P2 (0.1, 0.25, 0.5, 1.0)
+        // Chấm P2
         for(let i=1; i<=(cfg.num_p2 || 0); i++) {
             let correctSubs = 0;
             ['a','b','c','d'].forEach(sub => {
@@ -631,9 +632,10 @@ const App = () => {
 
         try {
             await fetch(`${API_URL}?action=submit`, {
-                method: 'POST', body: JSON.stringify(payload)
+                method: 'POST', 
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // Đã thêm giấy thông hành CORS
+                body: JSON.stringify(payload)
             });
-            // Lấy lại bảng xếp hạng sau khi nộp
             const rankRes = await fetch(`${API_URL}?action=get_ranking&exam=${encodeURIComponent(exam.title)}`);
             const rankData = await rankRes.json();
             setLeaderboard(rankData);
