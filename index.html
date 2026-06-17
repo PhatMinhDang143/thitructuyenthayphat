@@ -1,608 +1,571 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hệ Thống Kiểm Tra Trực Tuyến Học Sinh</title>
-    
-    <script src="https://cdn.tailwindcss.com"></script>
-    
-    <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
-    
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    
-    <script src="https://unpkg.com/lucide-react"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hệ Thống Kiểm Tra Trực Tuyến Học Sinh</title>
 
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
-        body { font-family: 'Inter', sans-serif; }
-        .custom-scroll::-webkit-scrollbar { width: 6px; height: 6px; }
-        .custom-scroll::-webkit-scrollbar-track { background: rgba(30, 41, 59, 0.5); }
-        .custom-scroll::-webkit-scrollbar-thumb { background: rgba(99, 102, 241, 0.3); border-radius: 9999px; }
-        .custom-scroll::-webkit-scrollbar-thumb:hover { background: rgba(99, 102, 241, 0.5); }
-        
-        #error-log {
-            display: none;
-            background: #ffebee;
-            color: #c62828;
-            padding: 20px;
-            margin: 20px;
-            border-radius: 8px;
-            font-family: monospace;
-            z-index: 9999;
-            position: relative;
-        }
-    </style>
+<script src="https://cdn.tailwindcss.com"></script>
 
-    <script>
-        const API_URL = "https://script.google.com/macros/s/AKfycbyVERzEfEK7t_Hp6PpWZYodTN-o7t4omX6W69p2Hn7URj71agiiKgvs_b954aiNMfn_/exec";
-        window.onerror = function(message, source, lineno, colno, error) {
-            document.getElementById('root').style.display = 'none';
-            var errorDiv = document.getElementById('error-log');
-            errorDiv.style.display = 'block';
-            errorDiv.innerHTML = `<h3>🚨 Lỗi Hệ Thống (Báo lại cho coder)</h3>
-                                  <p><b>Message:</b> ${message}</p>
-                                  <p><b>Dòng:</b> ${lineno}</p>
-                                  <p><b>Cột:</b> ${colno}</p>`;
-            return true;
-        };
-    </script>
+<script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+<script src="https://unpkg.com/lucide-react"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+body { font-family: 'Inter', sans-serif; }
+.custom-scroll::-webkit-scrollbar { width: 6px; height: 6px; }
+.custom-scroll::-webkit-scrollbar-track { background: rgba(30, 41, 59, 0.5); }
+.custom-scroll::-webkit-scrollbar-thumb { background: rgba(99, 102, 241, 0.3); border-radius: 9999px; }
+.custom-scroll::-webkit-scrollbar-thumb:hover { background: rgba(99, 102, 241, 0.5); }
+
+#error-log {
+display: none;
+background: #ffebee;
+color: #c62828;
+padding: 20px;
+margin: 20px;
+border-radius: 8px;
+font-family: monospace;
+z-index: 9999;
+position: relative;
+}
+</style>
+<script>
+const API_URL = "https://script.google.com/macros/s/AKfycbyVERzEfEK7t_Hp6PpWZYodTN-o7t4omX6W69p2Hn7URj71agiiKgvs_b954aiNMfn_/exec";
+window.onerror = function(message, source, lineno, colno, error) {
+document.getElementById('root').style.display = 'none';
+var errorDiv = document.getElementById('error-log');
+errorDiv.style.display = 'block';
+errorDiv.innerHTML = `<h3> 🚨  Lỗi Hệ Thống (Báo lại cho coder)</h3>
+<p><b>Message:</b> ${message}</p>
+<p><b>Dòng:</b> ${lineno}</p>
+<p><b>Cột:</b> ${colno}</p>`;
+return true;
+};
+</script>
 </head>
 <body class="bg-[#0b0f19] text-slate-100 selection:bg-indigo-500/30 min-h-screen relative overflow-x-hidden antialiased">
-    
-    <div id="error-log"></div>
-    <div id="root"></div>
 
-    <script type="text/babel">
-        const { useState, useEffect, useRef } = React;
-        
-        // Hàm lọc sạch các prop animation (tránh lỗi quăng vào thẻ DOM gốc)
-        const stripMotionProps = ({ initial, animate, exit, transition, ...props }) => props;
-        
-        // Render an toàn thay thế cho Framer Motion không cần CDN phụ thuộc bên ngoài
-        const motion = {
-            div: (props) => <div {...stripMotionProps(props)} />,
-            span: (props) => <span {...stripMotionProps(props)} />,
-            p: (props) => <p {...stripMotionProps(props)} />,
-            h2: (props) => <h2 {...stripMotionProps(props)} />,
-            h3: (props) => <h3 {...stripMotionProps(props)} />,
-            h4: (props) => <h4 {...stripMotionProps(props)} />
-        };
-        const AnimatePresence = ({children}) => <>{children}</>;
+<div id="error-log"></div>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useRef } = React;
 
-        // CẤU HÌNH ĐƯỜNG LINK GOOGLE APP SCRIPT
-        const API_URL = "https://script.google.com/macros/s/AKfycbwl7gLGLcemZOI8DX6M472D7WpDOyawTF2Ih1Wk_Gqp5lRs69SYZRVcPXNkl4_Mox6f/exec";
+// Hàm lọc sạch các prop animation (tránh lỗi quăng vào thẻ DOM gốc)
+const stripMotionProps = ({ initial, animate, exit, transition, ...props }) => props;
 
-        // Component Icon ánh xạ chuẩn xác từ bộ thư viện LucideReact toàn cục
-        const Icon = ({ name, size = 20, className = "" }) => {
-            if (!window.LucideReact) return null;
-            
-            // Chuyển đổi tên từ dạng "graduation-cap" thành "GraduationCap"
-            const parts = name.split('-');
-            const camelName = parts.map(p => p.charAt(0).toUpperCase() + p.slice(1)).join('');
-            
-            // Lấy component tương ứng, nếu không tìm thấy sẽ lấy icon HelpCircle làm mặc định
-            const IconComponent = window.LucideReact[camelName] || window.LucideReact.HelpCircle;
-            
-            return <IconComponent size={size} className={className} strokeWidth={2} />;
-        };
+// Render an toàn thay thế cho Framer Motion không cần CDN phụ thuộc bên ngoài
+const motion = {
+div: (props) => <div {...stripMotionProps(props)} />,
+span: (props) => <span {...stripMotionProps(props)} />,
+p: (props) => <p {...stripMotionProps(props)} />,
+h2: (props) => <h2 {...stripMotionProps(props)} />,
+h3: (props) => <h3 {...stripMotionProps(props)} />,
+h4: (props) => <h4 {...stripMotionProps(props)} />
+};
+const AnimatePresence = ({children}) => <>{children}</>;
 
-        const FooterCredit = () => (
-            <div className="mt-8 text-center text-xs text-slate-500 border-t border-slate-800/60 pt-4">
-                <p className="font-medium text-slate-400 tracking-wide">Hệ thống thi trắc nghiệm trực tuyến</p>
-                <p className="mt-1 text-slate-600">Vận hành mượt mà trên hạ tầng Cloud Serverless</p>
-            </div>
-        );
+// CẤU HÌNH ĐƯỜNG LINK GOOGLE APP SCRIPT
+const API_URL = "https://script.google.com/macros/s/AKfycbyVERzEfEK7t_Hp6PpWZYodTN-o7t4omX6W69p2Hn7URj71agiiKgvs_b954aiNMfn_/exec";
 
-        const AuthView = ({ onLoginSuccess }) => {
-            const [username, setUsername] = useState('');
-            const [password, setPassword] = useState('');
-            const [error, setError] = useState('');
-            const [isLoading, setIsLoading] = useState(false);
+// Component Icon ánh xạ chuẩn xác từ bộ thư viện LucideReact toàn cục
+const Icon = ({ name, size = 20, className = "" }) => {
+if (!window.LucideReact) return null;
 
-            const handleLoginSubmit = async (e) => {
-                e.preventDefault();
-                if (!username.trim() || !password.trim()) {
-                    setError('Vui lòng điền đầy đủ tài khoản và mật khẩu');
-                    return;
-                }
-                setIsLoading(true);
-                setError('');
-                try {
-                    const response = await fetch(`${API_URL}?action=login`, {
-                        method: 'POST',
-                        body: JSON.stringify({ username, password })
-                    });
-                    const result = await response.json();
-                    if (result.success) {
-                        onLoginSuccess({
-                            username: result.username,
-                            name: result.name,
-                            group: result.group,
-                            role: 'student'
-                        });
-                    } else {
-                        setError(result.message || 'Sai tài khoản hoặc mật khẩu');
-                    }
-                } catch (err) {
-                    setError('Không thể kết nối đến máy chủ API Sheets.');
-                } finally {
-                    setIsLoading(false);
-                }
-            };
+// Chuyển đổi tên từ dạng "graduation-cap" thành "GraduationCap"
+const parts = name.split('-');
+const camelName = parts.map(p => p.charAt(0).toUpperCase() + p.slice(1)).join('');
 
-            return (
-                <div className="min-h-[100dvh] flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
-                    <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-indigo-500/10 rounded-full blur-[120px] pointer-events-none"></div>
-                    <div className="absolute bottom-0 right-1/4 w-[400px] h-[400px] bg-emerald-500/5 rounded-full blur-[100px] pointer-events-none"></div>
-                    
-                    <motion.div className="sm:mx-auto sm:w-full sm:max-w-md relative z-10">
-                        <div className="flex justify-center">
-                            <div className="h-14 w-14 bg-gradient-to-tr from-indigo-500 to-violet-600 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-500/30 ring-4 ring-slate-800/50">
-                                <Icon name="graduation-cap" size={28} className="text-white"/>
-                            </div>
-                        </div>
-                        <h2 className="mt-6 text-center text-3xl font-extrabold tracking-tight bg-gradient-to-r from-slate-100 via-slate-200 to-slate-400 bg-clip-text text-transparent">HỌC SINH ĐĂNG NHẬP</h2>
-                        <p className="mt-2 text-center text-sm text-slate-400">Vui lòng sử dụng tài khoản được giáo viên cung cấp</p>
-                    </motion.div>
+// Lấy component tương ứng, nếu không tìm thấy sẽ lấy icon HelpCircle làm mặc định
+const IconComponent = window.LucideReact[camelName] || window.LucideReact.HelpCircle;
 
-                    <motion.div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md relative z-10">
-                        <div className="bg-slate-900/60 backdrop-blur-xl py-8 px-4 border border-slate-800/80 shadow-2xl sm:rounded-2xl sm:px-10">
-                            <AnimatePresence mode="wait">
-                                {error && (
-                                    <motion.div className="mb-4 p-3 bg-rose-500/10 border border-rose-500/20 text-rose-400 rounded-xl text-sm flex items-center gap-2">
-                                        <Icon name="alert-triangle" size={16} className="shrink-0" />
-                                        <span>{error}</span>
-                                    </motion.div>
-                                )}
-                            </AnimatePresence>
-                            <form onSubmit={handleLoginSubmit} className="space-y-5">
-                                <div>
-                                    <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Tên tài khoản</label>
-                                    <div className="relative rounded-xl shadow-sm">
-                                        <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
-                                            <Icon name="user" size={18} />
-                                        </div>
-                                        <input type="text" value={username} onChange={e => setUsername(e.target.value)} required className="w-full bg-slate-950/60 border border-slate-800/80 rounded-xl pl-10 pr-4 py-3 text-slate-200 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all placeholder-slate-600 text-sm" placeholder="Nhập số báo danh / mã HS" />
-                                    </div>
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Mật khẩu</label>
-                                    <div className="relative rounded-xl shadow-sm">
-                                        <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
-                                            <Icon name="lock" size={18} />
-                                        </div>
-                                        <input type="password" value={password} onChange={e => setPassword(e.target.value)} required className="w-full bg-slate-950/60 border border-slate-800/80 rounded-xl pl-10 pr-4 py-3 text-slate-200 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all placeholder-slate-600 text-sm" placeholder="••••••••" />
-                                    </div>
-                                </div>
-                                <button type="submit" disabled={isLoading} className="w-full bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 active:from-indigo-700 active:to-violet-700 text-white py-3.5 px-4 rounded-xl font-semibold shadow-lg shadow-indigo-600/20 transition-all tracking-wide disabled:opacity-50 text-sm mt-2 flex items-center justify-center gap-2">
-                                    {isLoading ? (
-                                        <>
-                                            <div className="w-4 h-4 border-2 border-slate-300 border-t-transparent rounded-full animate-spin"></div>
-                                            <span>Đang xác thực hệ thống...</span>
-                                        </>
-                                    ) : (
-                                        <>
-                                            <span>Vào Phòng Thi</span>
-                                            <Icon name="arrow-right" size={16} />
-                                        </>
-                                    )}
-                                </button>
-                            </form>
-                            <FooterCredit />
-                        </div>
-                    </motion.div>
-                </div>
-            );
-        };
+return <IconComponent size={size} className={className} strokeWidth={2} />;
+};
+const FooterCredit = () => (
+<div className="mt-8 text-center text-xs text-slate-500 border-t border-slate-800/60 pt-4">
+<p className="font-medium text-slate-400 tracking-wide">Hệ thống thi trắc nghiệm trực tuyến</p>
+<p className="mt-1 text-slate-600">Vận hành mượt mà trên hạ tầng Cloud Serverless</p>
+</div>
+);
+const AuthView = ({ onLoginSuccess }) => {
+const [username, setUsername] = useState('');
+const [password, setPassword] = useState('');
+const [error, setError] = useState('');
+const [isLoading, setIsLoading] = useState(false);
+const handleLoginSubmit = async (e) => {
+e.preventDefault();
+if (!username.trim() || !password.trim()) {
+setError('Vui lòng điền đầy đủ tài khoản và mật khẩu');
+return;
+}
+setIsLoading(true);
+setError('');
+try {
+const response = await fetch(`${API_URL}?action=login`, {
+method: 'POST',
+body: JSON.stringify({ username, password })
+});
+const result = await response.json();
+if (result.success) {
+onLoginSuccess({
+username: result.username,
+name: result.name,
+group: result.group,
+role: 'student'
+});
+} else {
+setError(result.message || 'Sai tài khoản hoặc mật khẩu');
+}
+} catch (err) {
+setError('Không thể kết nối đến máy chủ API Sheets.');
+} finally {
+setIsLoading(false);
+}
+};
+return (
+<div className="min-h-[100dvh] flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
+<div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-indigo-500/10 rounded-full blur-[120px] pointer-events-none"></div>
+<div className="absolute bottom-0 right-1/4 w-[400px] h-[400px] bg-emerald-500/5 rounded-full blur-[100px] pointer-events-none"></div>
 
-        const LobbyView = ({ user, onLogout, onSelectExam }) => {
-            const [exams, setExams] = useState([]);
-            const [loading, setLoading] = useState(true);
+<motion.div className="sm:mx-auto sm:w-full sm:max-w-md relative z-10">
+<div className="flex justify-center">
+<div className="h-14 w-14 bg-gradient-to-tr from-indigo-500 to-violet-600 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-500/30 ring-4 ring-slate-800/50">
+<Icon name="graduation-cap" size={28} className="text-white"/>
+</div>
+</div>
+<h2 className="mt-6 text-center text-3xl font-extrabold tracking-tight bg-gradient-to-r from-slate-100 via-slate-200 to-slate-400 bg-clip-text text-transparent">HỌC SINH ĐĂNG NHẬP</h2>
+<p className="mt-2 text-center text-sm text-slate-400">Vui lòng sử dụng tài khoản được giáo viên cung cấp</p>
+</motion.div>
+<motion.div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md relative z-10">
+<div className="bg-slate-900/60 backdrop-blur-xl py-8 px-4 border border-slate-800/80 shadow-2xl sm:rounded-2xl sm:px-10">
+<AnimatePresence mode="wait">
+{error && (
+<motion.div className="mb-4 p-3 bg-rose-500/10 border border-rose-500/20 text-rose-400 rounded-xl text-sm flex items-center gap-2">
+<Icon name="alert-triangle" size={16} className="shrink-0" />
+<span>{error}</span>
+</motion.div>
+)}
+</AnimatePresence>
+<form onSubmit={handleLoginSubmit} className="space-y-5">
+<div>
+<label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Tên tài khoản</label>
+<div className="relative rounded-xl shadow-sm">
+<div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
+<Icon name="user" size={18} />
+</div>
+<input type="text" value={username} onChange={e => setUsername(e.target.value)} required className="w-full bg-slate-950/60 border border-slate-800/80 rounded-xl pl-10 pr-4 py-3 text-slate-200 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all placeholder-slate-600 text-sm" placeholder="Nhập số báo danh / mã HS" />
+</div>
+</div>
+<div>
+<label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Mật khẩu</label>
+<div className="relative rounded-xl shadow-sm">
+<div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
+<Icon name="lock" size={18} />
+</div>
+<input type="password" value={password} onChange={e => setPassword(e.target.value)} required className="w-full bg-slate-950/60 border border-slate-800/80 rounded-xl pl-10 pr-4 py-3 text-slate-200 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all placeholder-slate-600 text-sm" placeholder="••••••••" />
+</div>
+</div>
+<button type="submit" disabled={isLoading} className="w-full bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 active:from-indigo-700 active:to-violet-700 text-white py-3.5 px-4 rounded-xl font-semibold shadow-lg shadow-indigo-600/20 transition-all tracking-wide disabled:opacity-50 text-sm mt-2 flex items-center justify-center gap-2">
+{isLoading ? (
+<>
+<div className="w-4 h-4 border-2 border-slate-300 border-t-transparent rounded-full animate-spin"></div>
+<span>Đang xác thực hệ thống...</span>
+</>
+) : (
+<>
+<span>Vào Phòng Thi</span>
+<Icon name="arrow-right" size={16} />
+</>
+)}
+</button>
+</form>
+<FooterCredit />
+</div>
+</motion.div>
+</div>
+);
+};
+const LobbyView = ({ user, onLogout, onSelectExam }) => {
+const [exams, setExams] = useState([]);
+const [loading, setLoading] = useState(true);
+useEffect(() => {
+fetch(`${API_URL}?action=get_exams`)
+.then(res => res.json())
+.then(data => {
+if (data.exams) setExams(data.exams);
+setLoading(false);
+})
+.catch(err => {
+console.error(err);
+setLoading(false);
+});
+}, []);
+return (
+<div className="max-w-5xl mx-auto px-4 py-12 relative z-10">
+<motion.div className="bg-gradient-to-r from-slate-900 via-indigo-950/30 to-slate-900 border border-slate-800/80 rounded-2xl p-6 md:p-8 flex flex-col md:flex-row md:items-center md:justify-between gap-6 shadow-xl mb-10 relative overflow-hidden">
+<div className="absolute top-0 right-0 w-[300px] h-[300px] bg-indigo-500/5 rounded-full blur-[80px] pointer-events-none"></div>
+<div className="flex items-center gap-4">
+<div className="h-16 w-16 bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 rounded-2xl flex items-center justify-center shrink-0">
+<Icon name="user" size={32} />
+</div>
+<div>
+<span className="px-2.5 py-0.5 bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 rounded-full text-[10px] font-bold uppercase tracking-wider">Thí sinh hệ thống</span>
+<h1 className="text-2xl md:text-3xl font-extrabold mt-1 bg-gradient-to-r from-slate-100 via-slate-200 to-slate-300 bg-clip-text text-transparent">{user.name}</h1>
+<div className="flex flex-wrap gap-4 mt-2 text-xs font-medium text-slate-400">
+<span className="flex items-center gap-1.5"><Icon name="hash" size={14} className="text-slate-500"/> SBD: <b className="text-slate-300">{user.username}</b></span>
+<span className="flex items-center gap-1.5"><Icon name="school" size={14} className="text-slate-500"/> Lớp chuyên nhiệm: <b className="text-slate-300">{user.group}</b></span>
+</div>
+</div>
+</div>
+<button onClick={onLogout} className="shrink-0 bg-slate-800/40 hover:bg-rose-500/10 border border-slate-700/50 hover:border-rose-500/30 px-4 py-2.5 rounded-xl text-xs font-semibold text-slate-300 hover:text-rose-400 transition-all flex items-center justify-center gap-2 shadow-inner">
+<Icon name="log-out" size={14}/>
+<span>Thoát tài khoản</span>
+</button>
+</motion.div>
+<div className="mb-6">
+<h3 className="text-sm font-bold tracking-wider text-slate-400 uppercase flex items-center gap-2">
+<Icon name="clipboard-list" size={18} className="text-indigo-500" />
+<span>Danh sách đề thi khả dụng</span>
+</h3>
+</div>
 
-            useEffect(() => {
-                fetch(`${API_URL}?action=get_exams`)
-                    .then(res => res.json())
-                    .then(data => {
-                        if (data.exams) setExams(data.exams);
-                        setLoading(false);
-                    })
-                    .catch(err => {
-                        console.error(err);
-                        setLoading(false);
-                    });
-            }, []);
+{loading ? (
+<motion.div className="bg-slate-900/20 border border-slate-800/40 rounded-2xl p-16 text-center text-slate-500 font-medium text-sm shadow-inner">
+<Icon name="loader" size={24} className="animate-spin mb-3 text-slate-600 block mx-auto" />
+Đang đồng bộ dữ liệu...
+</motion.div>
+) : exams.length === 0 ? (
+<div className="bg-slate-900/20 border border-slate-800/40 rounded-2xl p-12 text-center text-slate-500 text-sm">Hiện tại không có đề thi nào khả dụng.</div>
+) : (
+<div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+{exams.map((exam, idx) => {
+const totalQ = Object.keys(exam.questions || {}).length;
+return (
+<motion.div
+key={exam.id || idx}
+className="bg-slate-900/40 backdrop-blur-md border border-slate-800/80 rounded-2xl p-6 shadow-lg hover:border-indigo-500/40 transition-all flex flex-col justify-between group relative overflow-hidden"
+>
+<div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-indigo-500 to-violet-600 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+<div>
+<h4 className="text-lg font-bold text-slate-200 group-hover:text-indigo-400 transition-colors line-clamp-2 leading-snug">{exam.title}</h4>
+<div className="flex gap-3 mt-4 text-xs font-medium text-slate-400">
+<span className="bg-slate-950/60 px-3 py-1.5 border border-slate-800/60 rounded-xl flex items-center gap-1.5"><Icon name="clock" size={13} className="text-slate-500"/> {exam.duration} phút</span>
+<span className="bg-slate-950/60 px-3 py-1.5 border border-slate-800/60 rounded-xl flex items-center gap-1.5"><Icon name="help-circle" size={13} className="text-slate-500"/> {totalQ} câu trắc nghiệm</span>
+</div>
+</div>
+<button onClick={() => onSelectExam(exam)} className="w-full mt-6 bg-slate-800/60 hover:bg-gradient-to-r hover:from-indigo-600 hover:to-violet-600 text-slate-300 hover:text-white py-3.5 rounded-xl font-semibold text-xs transition-all shadow-md flex items-center justify-center gap-2 border border-slate-700/40 hover:border-transparent tracking-wider uppercase">
+<span>Bắt đầu làm bài</span>
+<Icon name="arrow-right" size={14} className="group-hover:translate-x-0.5 transition-transform"/>
+</button>
+</motion.div>
+);
+})}
+</div>
+)}
+<FooterCredit />
+</div>
+);
+};
+const ExamView = ({ user, exam, onExamSubmit }) => {
+const [answers, setAnswers] = useState({});
+const [timeLeft, setTimeLeft] = useState(exam.duration * 60);
+const [cheatCount, setCheatCount] = useState(0);
+const timerRef = useRef(null);
+useEffect(() => {
+const handleVisibilityChange = () => {
+if (document.hidden) {
+setCheatCount(prev => {
+const next = prev + 1;
+alert(`CẢNH BÁO: Bạn đã chuyển tab/rời phòng thi ${next} lần!`);
+return next;
+});
+}
+};
+document.addEventListener('visibilitychange', handleVisibilityChange);
+return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+}, []);
+useEffect(() => {
+timerRef.current = setInterval(() => {
+setTimeLeft(prev => {
+if (prev <= 1) {
+clearInterval(timerRef.current);
+handleSubmit(true);
+return 0;
+}
+return prev - 1;
+});
+}, 1000);
+return () => clearInterval(timerRef.current);
+}, []);
+const handleSelectOption = (qId, option) => {
+setAnswers(prev => ({ ...prev, [qId]: option }));
+};
+const handleSubmit = (isAuto = false) => {
+if (!isAuto && !confirm('Bạn có chắc chắn muốn nộp bài?')) return;
+clearInterval(timerRef.current);
+onExamSubmit(answers, cheatCount);
+};
+const formatTime = (seconds) => {
+const h = Math.floor(seconds / 3600);
+const m = Math.floor((seconds % 3600) / 60);
+const s = seconds % 60;
+return `${h > 0 ? h + ':' : ''}${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+};
+const qIds = Object.keys(exam.questions || {});
+return (
+<div className="min-h-[100dvh] flex flex-col md:flex-row relative">
+<div className="flex-1 overflow-y-auto custom-scroll px-4 md:px-12 py-8 pb-32 md:h-[100dvh]">
+<div className="max-w-3xl mx-auto space-y-8">
+<div className="border-b border-slate-800/80 pb-5">
+<span className="text-xs font-bold text-indigo-400 tracking-widest uppercase block mb-1">Phòng thi trực tuyến</span>
+<h2 className="text-xl md:text-2xl font-extrabold text-slate-100 tracking-tight leading-tight">{exam.title}</h2>
+</div>
+{qIds.map((qId, index) => {
+const qObj = exam.questions[qId];
+return (
+<motion.div
+key={qId}
+id={`q-block-${qId}`}
+className="bg-slate-900/30 border border-slate-800/60 p-6 rounded-2xl shadow-sm space-y-5 relative overflow-hidden"
+>
+<div className="flex items-start gap-4">
+<span className="bg-gradient-to-tr from-indigo-600 to-violet-600 text-white text-[11px] font-black px-3 py-1.5 rounded-xl shrink-0 tracking-wider uppercase shadow-md shadow-indigo-600/10">Câu {index + 1}</span>
+<p className="text-slate-200 font-semibold leading-relaxed whitespace-pre-line text-[15px] pt-0.5">{qObj.text}</p>
+</div>
+<div className="grid grid-cols-1 gap-3 pl-0 md:pl-14">
+{['A', 'B', 'C', 'D'].map(opt => {
+const optText = qObj[`opt${opt}`];
+if (!optText) return null;
+const isChecked = answers[qId] === opt;
+return (
+<label key={opt} className={`flex items-start gap-3.5 p-4 rounded-xl border transition-all cursor-pointer relative group/opt ${isChecked ?
+'bg-indigo-500/10 border-indigo-500/40 text-indigo-300' : 'bg-slate-950/40 border-slate-800/50 hover:bg-slate-900/40 text-slate-400 hover:text-slate-300'}`}>
+<input type="radio" name={`q-${qId}`} checked={isChecked} onChange={() => handleSelectOption(qId, opt)} className="sr-only" />
+<span className={`w-6 h-6 rounded-full border flex items-center justify-center text-xs font-black shrink-0 transition-all ${isChecked ?
+'bg-gradient-to-tr from-indigo-500 to-violet-600 border-transparent text-white scale-105 shadow-md shadow-indigo-500/20' : 'border-slate-700 bg-slate-900 group-hover/opt:border-slate-500 text-slate-400 group-hover/opt:text-slate-200'}`}>{opt}</span>
+<span className="text-sm leading-snug font-medium pt-0.5">{optText}</span>
+</label>
+);
+})}
+</div>
+</motion.div>
+);
+})}
+</div>
+</div>
+<div className="w-full md:w-80 bg-[#0d1322]/95 backdrop-blur-xl border-t md:border-t-0 md:border-l border-slate-800/80 p-6 flex flex-col justify-between shrink-0 md:h-[100dvh] sticky bottom-0 md:top-0 z-30 shadow-2xl">
+<div className="space-y-6">
+<div className="flex items-center justify-between border-b border-slate-800/80 pb-4">
+<span className="text-xs font-bold uppercase tracking-wider text-slate-400">Thời gian làm bài</span>
+<div className="flex items-center gap-1.5 text-xl font-black font-mono tracking-wider text-amber-400 bg-amber-500/5 px-3 py-1 rounded-xl border border-amber-500/10 shadow-inner">
+<Icon name="clock" size={16} className="text-amber-500 animate-pulse" />
+<span>{formatTime(timeLeft)}</span>
+</div>
+</div>
+<div className="hidden md:block">
+<span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest block mb-3">Sơ đồ câu hỏi</span>
+<div className="grid grid-cols-5 gap-2 max-h-[45vh] overflow-y-auto custom-scroll pr-1">
+{qIds.map((qId, idx) => {
+const isDone = !!answers[qId];
+return (
+<button
+key={qId}
+onClick={() => document.getElementById(`q-block-${qId}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })}
+className={`h-9 rounded-xl font-mono font-black text-xs border transition-all flex items-center justify-center ${isDone ?
+'bg-gradient-to-tr from-indigo-600 to-violet-600 border-transparent text-white shadow-md shadow-indigo-600/20 scale-105' : 'bg-slate-950/60 border-slate-800 text-slate-500 hover:border-slate-700 hover:text-slate-400'}`}
+>
+{idx + 1}
+</button>
+);
+})}
+</div>
+</div>
+</div>
+<div className="mt-6 space-y-4">
+<div className="bg-slate-950/40 border border-slate-800/60 rounded-xl p-3 text-xs space-y-2 font-medium text-slate-400">
+<div className="flex justify-between items-center">
+<span>Tiến độ:</span>
+<span className="text-slate-200 font-bold bg-slate-800 px-2 py-0.5 rounded-lg">{Object.keys(answers).length} / {qIds.length}</span>
+</div>
+</div>
+<button onClick={() => handleSubmit(false)} className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white py-3.5 rounded-xl font-bold uppercase text-xs shadow-lg flex items-center justify-center gap-1.5 border border-emerald-500/20">
+<Icon name="check" size={16}/>
+<span>Nộp bài</span>
+</button>
+</div>
+</div>
+</div>
+);
+};
+const ResultView = ({ user, exam, resultData, onBackToLobby }) => {
+const [leaderboard, setLeaderboard] = useState([]);
+const [loadingRank, setLoadingRank] = useState(true);
+useEffect(() => {
+fetch(`${API_URL}?action=get_ranking&exam=${encodeURIComponent(exam.title)}`)
+.then(res => res.json())
+.then(data => {
+setLeaderboard(data);
+setLoadingRank(false);
+})
+.catch(err => {
+console.error(err);
+setLoadingRank(false);
+});
+}, [exam.title]);
+return (
+<div className="max-w-5xl mx-auto px-4 py-12 relative z-10">
+<div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
+<motion.div className="md:col-span-1 bg-slate-900/60 border border-slate-800/80 p-6 rounded-2xl text-center shadow-xl backdrop-blur-md relative overflow-hidden">
+<div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-500 to-teal-400"></div>
+<div className="inline-flex h-12 w-12 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-xl items-center justify-center mb-4 shadow-inner">
+<Icon name="check-circle" size={24}/>
+</div>
+<h3 className="text-lg font-bold text-slate-200">Hoàn Thành!</h3>
 
-            return (
-                <div className="max-w-5xl mx-auto px-4 py-12 relative z-10">
-                    <motion.div className="bg-gradient-to-r from-slate-900 via-indigo-950/30 to-slate-900 border border-slate-800/80 rounded-2xl p-6 md:p-8 flex flex-col md:flex-row md:items-center md:justify-between gap-6 shadow-xl mb-10 relative overflow-hidden">
-                        <div className="absolute top-0 right-0 w-[300px] h-[300px] bg-indigo-500/5 rounded-full blur-[80px] pointer-events-none"></div>
-                        <div className="flex items-center gap-4">
-                            <div className="h-16 w-16 bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 rounded-2xl flex items-center justify-center shrink-0">
-                                <Icon name="user" size={32} />
-                            </div>
-                            <div>
-                                <span className="px-2.5 py-0.5 bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 rounded-full text-[10px] font-bold uppercase tracking-wider">Thí sinh hệ thống</span>
-                                <h1 className="text-2xl md:text-3xl font-extrabold mt-1 bg-gradient-to-r from-slate-100 via-slate-200 to-slate-300 bg-clip-text text-transparent">{user.name}</h1>
-                                <div className="flex flex-wrap gap-4 mt-2 text-xs font-medium text-slate-400">
-                                    <span className="flex items-center gap-1.5"><Icon name="hash" size={14} className="text-slate-500"/> SBD: <b className="text-slate-300">{user.username}</b></span>
-                                    <span className="flex items-center gap-1.5"><Icon name="school" size={14} className="text-slate-500"/> Lớp chuyên nhiệm: <b className="text-slate-300">{user.group}</b></span>
-                                </div>
-                            </div>
-                        </div>
-                        <button onClick={onLogout} className="shrink-0 bg-slate-800/40 hover:bg-rose-500/10 border border-slate-700/50 hover:border-rose-500/30 px-4 py-2.5 rounded-xl text-xs font-semibold text-slate-300 hover:text-rose-400 transition-all flex items-center justify-center gap-2 shadow-inner">
-                            <Icon name="log-out" size={14}/>
-                            <span>Thoát tài khoản</span>
-                        </button>
-                    </motion.div>
+<div className="my-7 relative inline-block">
+<span className="text-6xl font-black bg-gradient-to-tr from-emerald-400 to-teal-300 bg-clip-text text-transparent font-mono">{resultData.score}</span>
+<span className="text-slate-500 text-[10px] font-bold uppercase tracking-widest block mt-2">Điểm số</span>
+</div>
 
-                    <div className="mb-6">
-                        <h3 className="text-sm font-bold tracking-wider text-slate-400 uppercase flex items-center gap-2">
-                            <Icon name="clipboard-list" size={18} className="text-indigo-500" /> 
-                            <span>Danh sách đề thi khả dụng</span>
-                        </h3>
-                    </div>
-                    
-                    {loading ? (
-                        <motion.div className="bg-slate-900/20 border border-slate-800/40 rounded-2xl p-16 text-center text-slate-500 font-medium text-sm shadow-inner">
-                            <Icon name="loader" size={24} className="animate-spin mb-3 text-slate-600 block mx-auto" />
-                            Đang đồng bộ dữ liệu...
-                        </motion.div>
-                    ) : exams.length === 0 ? (
-                        <div className="bg-slate-900/20 border border-slate-800/40 rounded-2xl p-12 text-center text-slate-500 text-sm">Hiện tại không có đề thi nào khả dụng.</div>
-                    ) : (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                            {exams.map((exam, idx) => {
-                                const totalQ = Object.keys(exam.questions || {}).length;
-                                return (
-                                    <motion.div 
-                                        key={exam.id || idx}
-                                        className="bg-slate-900/40 backdrop-blur-md border border-slate-800/80 rounded-2xl p-6 shadow-lg hover:border-indigo-500/40 transition-all flex flex-col justify-between group relative overflow-hidden"
-                                    >
-                                        <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-indigo-500 to-violet-600 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                                        <div>
-                                            <h4 className="text-lg font-bold text-slate-200 group-hover:text-indigo-400 transition-colors line-clamp-2 leading-snug">{exam.title}</h4>
-                                            <div className="flex gap-3 mt-4 text-xs font-medium text-slate-400">
-                                                <span className="bg-slate-950/60 px-3 py-1.5 border border-slate-800/60 rounded-xl flex items-center gap-1.5"><Icon name="clock" size={13} className="text-slate-500"/> {exam.duration} phút</span>
-                                                <span className="bg-slate-950/60 px-3 py-1.5 border border-slate-800/60 rounded-xl flex items-center gap-1.5"><Icon name="help-circle" size={13} className="text-slate-500"/> {totalQ} câu trắc nghiệm</span>
-                                            </div>
-                                        </div>
-                                        <button onClick={() => onSelectExam(exam)} className="w-full mt-6 bg-slate-800/60 hover:bg-gradient-to-r hover:from-indigo-600 hover:to-violet-600 text-slate-300 hover:text-white py-3.5 rounded-xl font-semibold text-xs transition-all shadow-md flex items-center justify-center gap-2 border border-slate-700/40 hover:border-transparent tracking-wider uppercase">
-                                            <span>Bắt đầu làm bài</span>
-                                            <Icon name="arrow-right" size={14} className="group-hover:translate-x-0.5 transition-transform"/>
-                                        </button>
-                                    </motion.div>
-                                );
-                            })}
-                        </div>
-                    )}
-                    <FooterCredit />
-                </div>
-            );
-        };
+<div className="bg-slate-950/60 border border-slate-800/80 rounded-xl p-3.5 text-left text-xs space-y-2.5 font-medium text-slate-400 shadow-inner">
+<p className="flex justify-between items-center border-b border-slate-800/60 pb-2"><span>Số câu đúng:</span> <b className="text-slate-200 font-mono text-sm bg-slate-800 px-2 py-0.5 rounded-md">{resultData.correct}</b></p>
+<p className="flex justify-between items-center"><span>Vi phạm tab:</span> <b className="font-mono text-xs text-rose-400">{resultData.cheatCount} lần</b></p>
+</div>
+</motion.div>
+<motion.div className="md:col-span-2 bg-slate-900/60 border border-slate-800/80 rounded-2xl shadow-xl backdrop-blur-md overflow-hidden relative">
+<div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-500 to-violet-500"></div>
+<div className="p-5 border-b border-slate-800/80 bg-slate-900/40 flex items-center gap-2">
+<Icon name="trophy" size={18} className="text-amber-400" />
+<h3 className="font-extrabold text-slate-200 uppercase tracking-wider text-xs">Bảng xếp hạng</h3>
+</div>
+<div className="overflow-x-auto custom-scroll max-h-[420px]">
+<table className="w-full text-left border-collapse">
+<thead>
+<tr className="border-b border-slate-800/80 bg-slate-950/40 text-slate-500 text-[11px] uppercase tracking-widest font-bold">
+<th className="py-3.5 px-4 text-center">Hạng</th>
+<th className="py-3.5 px-4">Thí sinh</th>
+<th className="py-3.5 px-4">Lớp</th>
+<th className="py-3.5 px-4 text-right">Điểm</th>
+</tr>
+</thead>
+<tbody className="divide-y divide-slate-800/40 text-sm font-medium">
+{loadingRank ? (
+<tr>
+<td colSpan="4" className="py-12 text-center text-slate-500 text-xs">Đang tải...</td>
+</tr>
+) : leaderboard.length === 0 ? (
+<tr>
+<td colSpan="4" className="py-8 text-center text-slate-500 text-xs">Chưa có dữ liệu.</td>
+</tr>
+) : (
+leaderboard.map((item, idx) => (
+<tr key={idx} className="hover:bg-slate-800/10">
+<td className="py-3 px-4 text-center">{idx + 1}</td>
+<td className="py-3 px-4 text-slate-200">{item.name}</td>
+<td className="py-3 px-4 text-slate-400 text-xs">{item.group}</td>
+<td className="py-3 px-4 text-right text-indigo-400 font-bold">{item.score}</td>
+</tr>
+))
+)}
+</tbody>
+</table>
+</div>
+</motion.div>
+</div>
 
-        const ExamView = ({ user, exam, onExamSubmit }) => {
-            const [answers, setAnswers] = useState({});
-            const [timeLeft, setTimeLeft] = useState(exam.duration * 60);
-            const [cheatCount, setCheatCount] = useState(0);
-            const timerRef = useRef(null);
-
-            useEffect(() => {
-                const handleVisibilityChange = () => {
-                    if (document.hidden) {
-                        setCheatCount(prev => {
-                            const next = prev + 1;
-                            alert(`CẢNH BÁO: Bạn đã chuyển tab/rời phòng thi ${next} lần!`);
-                            return next;
-                        });
-                    }
-                };
-                document.addEventListener('visibilitychange', handleVisibilityChange);
-                return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-            }, []);
-
-            useEffect(() => {
-                timerRef.current = setInterval(() => {
-                    setTimeLeft(prev => {
-                        if (prev <= 1) {
-                            clearInterval(timerRef.current);
-                            handleSubmit(true);
-                            return 0;
-                        }
-                        return prev - 1;
-                    });
-                }, 1000);
-                return () => clearInterval(timerRef.current);
-            }, []);
-
-            const handleSelectOption = (qId, option) => {
-                setAnswers(prev => ({ ...prev, [qId]: option }));
-            };
-
-            const handleSubmit = (isAuto = false) => {
-                if (!isAuto && !confirm('Bạn có chắc chắn muốn nộp bài?')) return;
-                clearInterval(timerRef.current);
-                onExamSubmit(answers, cheatCount);
-            };
-
-            const formatTime = (seconds) => {
-                const h = Math.floor(seconds / 3600);
-                const m = Math.floor((seconds % 3600) / 60);
-                const s = seconds % 60;
-                return `${h > 0 ? h + ':' : ''}${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-            };
-
-            const qIds = Object.keys(exam.questions || {});
-
-            return (
-                <div className="min-h-[100dvh] flex flex-col md:flex-row relative">
-                    <div className="flex-1 overflow-y-auto custom-scroll px-4 md:px-12 py-8 pb-32 md:h-[100dvh]">
-                        <div className="max-w-3xl mx-auto space-y-8">
-                            <div className="border-b border-slate-800/80 pb-5">
-                                <span className="text-xs font-bold text-indigo-400 tracking-widest uppercase block mb-1">Phòng thi trực tuyến</span>
-                                <h2 className="text-xl md:text-2xl font-extrabold text-slate-100 tracking-tight leading-tight">{exam.title}</h2>
-                            </div>
-
-                            {qIds.map((qId, index) => {
-                                const qObj = exam.questions[qId];
-                                return (
-                                    <motion.div 
-                                        key={qId} 
-                                        id={`q-block-${qId}`}
-                                        className="bg-slate-900/30 border border-slate-800/60 p-6 rounded-2xl shadow-sm space-y-5 relative overflow-hidden"
-                                    >
-                                        <div className="flex items-start gap-4">
-                                            <span className="bg-gradient-to-tr from-indigo-600 to-violet-600 text-white text-[11px] font-black px-3 py-1.5 rounded-xl shrink-0 tracking-wider uppercase shadow-md shadow-indigo-600/10">Câu {index + 1}</span>
-                                            <p className="text-slate-200 font-semibold leading-relaxed whitespace-pre-line text-[15px] pt-0.5">{qObj.text}</p>
-                                        </div>
-                                        <div className="grid grid-cols-1 gap-3 pl-0 md:pl-14">
-                                            {['A', 'B', 'C', 'D'].map(opt => {
-                                                const optText = qObj[`opt${opt}`];
-                                                if (!optText) return null;
-                                                const isChecked = answers[qId] === opt;
-                                                return (
-                                                    <label key={opt} className={`flex items-start gap-3.5 p-4 rounded-xl border transition-all cursor-pointer relative group/opt ${isChecked ? 'bg-indigo-500/10 border-indigo-500/40 text-indigo-300' : 'bg-slate-950/40 border-slate-800/50 hover:bg-slate-900/40 text-slate-400 hover:text-slate-300'}`}>
-                                                        <input type="radio" name={`q-${qId}`} checked={isChecked} onChange={() => handleSelectOption(qId, opt)} className="sr-only" />
-                                                        <span className={`w-6 h-6 rounded-full border flex items-center justify-center text-xs font-black shrink-0 transition-all ${isChecked ? 'bg-gradient-to-tr from-indigo-500 to-violet-600 border-transparent text-white scale-105 shadow-md shadow-indigo-500/20' : 'border-slate-700 bg-slate-900 group-hover/opt:border-slate-500 text-slate-400 group-hover/opt:text-slate-200'}`}>{opt}</span>
-                                                        <span className="text-sm leading-snug font-medium pt-0.5">{optText}</span>
-                                                    </label>
-                                                );
-                                            })}
-                                        </div>
-                                    </motion.div>
-                                );
-                            })}
-                        </div>
-                    </div>
-
-                    <div className="w-full md:w-80 bg-[#0d1322]/95 backdrop-blur-xl border-t md:border-t-0 md:border-l border-slate-800/80 p-6 flex flex-col justify-between shrink-0 md:h-[100dvh] sticky bottom-0 md:top-0 z-30 shadow-2xl">
-                        <div className="space-y-6">
-                            <div className="flex items-center justify-between border-b border-slate-800/80 pb-4">
-                                <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Thời gian làm bài</span>
-                                <div className="flex items-center gap-1.5 text-xl font-black font-mono tracking-wider text-amber-400 bg-amber-500/5 px-3 py-1 rounded-xl border border-amber-500/10 shadow-inner">
-                                    <Icon name="clock" size={16} className="text-amber-500 animate-pulse" />
-                                    <span>{formatTime(timeLeft)}</span>
-                                </div>
-                            </div>
-
-                            <div className="hidden md:block">
-                                <span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest block mb-3">Sơ đồ câu hỏi</span>
-                                <div className="grid grid-cols-5 gap-2 max-h-[45vh] overflow-y-auto custom-scroll pr-1">
-                                    {qIds.map((qId, idx) => {
-                                        const isDone = !!answers[qId];
-                                        return (
-                                            <button 
-                                                key={qId} 
-                                                onClick={() => document.getElementById(`q-block-${qId}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })} 
-                                                className={`h-9 rounded-xl font-mono font-black text-xs border transition-all flex items-center justify-center ${isDone ? 'bg-gradient-to-tr from-indigo-600 to-violet-600 border-transparent text-white shadow-md shadow-indigo-600/20 scale-105' : 'bg-slate-950/60 border-slate-800 text-slate-500 hover:border-slate-700 hover:text-slate-400'}`}
-                                            >
-                                                {idx + 1}
-                                            </button>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="mt-6 space-y-4">
-                            <div className="bg-slate-950/40 border border-slate-800/60 rounded-xl p-3 text-xs space-y-2 font-medium text-slate-400">
-                                <div className="flex justify-between items-center">
-                                    <span>Tiến độ:</span> 
-                                    <span className="text-slate-200 font-bold bg-slate-800 px-2 py-0.5 rounded-lg">{Object.keys(answers).length} / {qIds.length}</span>
-                                </div>
-                            </div>
-                            <button onClick={() => handleSubmit(false)} className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white py-3.5 rounded-xl font-bold uppercase text-xs shadow-lg flex items-center justify-center gap-1.5 border border-emerald-500/20">
-                                <Icon name="check" size={16}/>
-                                <span>Nộp bài</span>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            );
-        };
-
-        const ResultView = ({ user, exam, resultData, onBackToLobby }) => {
-            const [leaderboard, setLeaderboard] = useState([]);
-            const [loadingRank, setLoadingRank] = useState(true);
-
-            useEffect(() => {
-                fetch(`${API_URL}?action=get_ranking&exam=${encodeURIComponent(exam.title)}`)
-                    .then(res => res.json())
-                    .then(data => {
-                        setLeaderboard(data);
-                        setLoadingRank(false);
-                    })
-                    .catch(err => {
-                        console.error(err);
-                        setLoadingRank(false);
-                    });
-            }, [exam.title]);
-
-            return (
-                <div className="max-w-5xl mx-auto px-4 py-12 relative z-10">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
-                        <motion.div className="md:col-span-1 bg-slate-900/60 border border-slate-800/80 p-6 rounded-2xl text-center shadow-xl backdrop-blur-md relative overflow-hidden">
-                            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-500 to-teal-400"></div>
-                            <div className="inline-flex h-12 w-12 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-xl items-center justify-center mb-4 shadow-inner">
-                                <Icon name="check-circle" size={24}/>
-                            </div>
-                            <h3 className="text-lg font-bold text-slate-200">Hoàn Thành!</h3>
-                            
-                            <div className="my-7 relative inline-block">
-                                <span className="text-6xl font-black bg-gradient-to-tr from-emerald-400 to-teal-300 bg-clip-text text-transparent font-mono">{resultData.score}</span>
-                                <span className="text-slate-500 text-[10px] font-bold uppercase tracking-widest block mt-2">Điểm số</span>
-                            </div>
-                            
-                            <div className="bg-slate-950/60 border border-slate-800/80 rounded-xl p-3.5 text-left text-xs space-y-2.5 font-medium text-slate-400 shadow-inner">
-                                <p className="flex justify-between items-center border-b border-slate-800/60 pb-2"><span>Số câu đúng:</span> <b className="text-slate-200 font-mono text-sm bg-slate-800 px-2 py-0.5 rounded-md">{resultData.correct}</b></p>
-                                <p className="flex justify-between items-center"><span>Vi phạm tab:</span> <b className="font-mono text-xs text-rose-400">{resultData.cheatCount} lần</b></p>
-                            </div>
-                        </motion.div>
-
-                        <motion.div className="md:col-span-2 bg-slate-900/60 border border-slate-800/80 rounded-2xl shadow-xl backdrop-blur-md overflow-hidden relative">
-                            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-500 to-violet-500"></div>
-                            <div className="p-5 border-b border-slate-800/80 bg-slate-900/40 flex items-center gap-2">
-                                <Icon name="trophy" size={18} className="text-amber-400" />
-                                <h3 className="font-extrabold text-slate-200 uppercase tracking-wider text-xs">Bảng xếp hạng</h3>
-                            </div>
-                            <div className="overflow-x-auto custom-scroll max-h-[420px]">
-                                <table className="w-full text-left border-collapse">
-                                    <thead>
-                                        <tr className="border-b border-slate-800/80 bg-slate-950/40 text-slate-500 text-[11px] uppercase tracking-widest font-bold">
-                                            <th className="py-3.5 px-4 text-center">Hạng</th>
-                                            <th className="py-3.5 px-4">Thí sinh</th>
-                                            <th className="py-3.5 px-4">Lớp</th>
-                                            <th className="py-3.5 px-4 text-right">Điểm</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-slate-800/40 text-sm font-medium">
-                                        {loadingRank ? (
-                                            <tr>
-                                                <td colSpan="4" className="py-12 text-center text-slate-500 text-xs">Đang tải...</td>
-                                            </tr>
-                                        ) : leaderboard.length === 0 ? (
-                                            <tr>
-                                                <td colSpan="4" className="py-8 text-center text-slate-500 text-xs">Chưa có dữ liệu.</td>
-                                            </tr>
-                                        ) : (
-                                            leaderboard.map((item, idx) => (
-                                                <tr key={idx} className="hover:bg-slate-800/10">
-                                                    <td className="py-3 px-4 text-center">{idx + 1}</td>
-                                                    <td className="py-3 px-4 text-slate-200">{item.name}</td>
-                                                    <td className="py-3 px-4 text-slate-400 text-xs">{item.group}</td>
-                                                    <td className="py-3 px-4 text-right text-indigo-400 font-bold">{item.score}</td>
-                                                </tr>
-                                            ))
-                                        )}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </motion.div>
-                    </div>
-                    
-                    <button onClick={onBackToLobby} className="w-full mt-8 bg-slate-900/60 hover:bg-slate-800/80 border border-slate-800 text-slate-300 py-4 rounded-xl font-bold uppercase text-xs flex items-center justify-center gap-2">
-                        <Icon name="arrow-left" size={16}/>
-                        <span>Quay về phòng chờ</span>
-                    </button>
-                    <FooterCredit />
-                </div>
-            );
-        };
-
-        const App = () => {
-            const [view, setView] = useState('auth'); 
-            const [user, setUser] = useState(null);
-            const [selectedExam, setSelectedExam] = useState(null);
-            const [resultData, setResultData] = useState(null);
-
-            const handleLoginSuccess = (userData) => {
-                setUser(userData);
-                setView('lobby');
-            };
-
-            const handleLogout = () => {
-                setUser(null);
-                setView('auth');
-            };
-
-            const handleSelectExam = (exam) => {
-                setSelectedExam(exam);
-                setView('exam');
-            };
-
-            const handleExamSubmit = async (answers, cheatCount) => {
-                const qMap = selectedExam.questions || {};
-                const aMap = selectedExam.answers || {};
-                let correctCount = 0;
-                let totalQuestions = Object.keys(qMap).length;
-
-                Object.keys(qMap).forEach(qId => {
-                    if (answers[qId] === aMap[qId]) correctCount++;
-                });
-
-                const rawScore = totalQuestions > 0 ? (correctCount / totalQuestions) * 10 : 0;
-                const finalScore = Math.round(rawScore * 100) / 100;
-
-                const payload = {
-                    username: user.username,
-                    name: user.name,
-                    group: user.group,
-                    examTitle: selectedExam.title,
-                    score: finalScore,
-                    correct: `${correctCount}/${totalQuestions}`,
-                    cheat: `Rời màn hình ${cheatCount} lần`,
-                    details: answers
-                };
-
-                setResultData({
-                    score: finalScore,
-                    correct: `${correctCount}/${totalQuestions}`,
-                    cheatCount: cheatCount
-                });
-                setView('result');
-
-                try {
-                    await fetch(`${API_URL}?action=submit`, {
-                        method: 'POST',
-                        body: JSON.stringify(payload)
-                    });
-                } catch (e) {
-                    console.error("Lỗi:", e);
-                }
-            };
-
-            return (
-                <div className="min-h-[100dvh] w-full relative">
-                    <AnimatePresence mode="wait">
-                        {view === 'auth' && (
-                            <motion.div key="auth">
-                                <AuthView onLoginSuccess={handleLoginSuccess} />
-                            </motion.div>
-                        )}
-                        {view === 'lobby' && (
-                            <motion.div key="lobby">
-                                <LobbyView user={user} onLogout={handleLogout} onSelectExam={handleSelectExam} />
-                            </motion.div>
-                        )}
-                        {view === 'exam' && (
-                            <motion.div key="exam">
-                                <ExamView user={user} exam={selectedExam} onExamSubmit={handleExamSubmit} />
-                            </motion.div>
-                        )}
-                        {view === 'result' && (
-                            <motion.div key="result">
-                                <ResultView user={user} exam={selectedExam} resultData={resultData} onBackToLobby={() => setView('lobby')} />
-                            </motion.div>
-                        )}
-                    </AnimatePresence>
-                </div>
-            );
-        };
-
-        const rootElement = document.getElementById('root');
-        const root = ReactDOM.createRoot(rootElement);
-        root.render(<App />);
-    </script>
+<button onClick={onBackToLobby} className="w-full mt-8 bg-slate-900/60 hover:bg-slate-800/80 border border-slate-800 text-slate-300 py-4 rounded-xl font-bold uppercase text-xs flex items-center justify-center gap-2">
+<Icon name="arrow-left" size={16}/>
+<span>Quay về phòng chờ</span>
+</button>
+<FooterCredit />
+</div>
+);
+};
+const App = () => {
+const [view, setView] = useState('auth');
+const [user, setUser] = useState(null);
+const [selectedExam, setSelectedExam] = useState(null);
+const [resultData, setResultData] = useState(null);
+const handleLoginSuccess = (userData) => {
+setUser(userData);
+setView('lobby');
+};
+const handleLogout = () => {
+setUser(null);
+setView('auth');
+};
+const handleSelectExam = (exam) => {
+setSelectedExam(exam);
+setView('exam');
+};
+const handleExamSubmit = async (answers, cheatCount) => {
+const qMap = selectedExam.questions || {};
+const aMap = selectedExam.answers || {};
+let correctCount = 0;
+let totalQuestions = Object.keys(qMap).length;
+Object.keys(qMap).forEach(qId => {
+if (answers[qId] === aMap[qId]) correctCount++;
+});
+const rawScore = totalQuestions > 0 ? (correctCount / totalQuestions) * 10 : 0;
+const finalScore = Math.round(rawScore * 100) / 100;
+const payload = {
+username: user.username,
+name: user.name,
+group: user.group,
+examTitle: selectedExam.title,
+score: finalScore,
+correct: `${correctCount}/${totalQuestions}`,
+cheat: `Rời màn hình ${cheatCount} lần`,
+details: answers
+};
+setResultData({
+score: finalScore,
+correct: `${correctCount}/${totalQuestions}`,
+cheatCount: cheatCount
+});
+setView('result');
+try {
+await fetch(`${API_URL}?action=submit`, {
+method: 'POST',
+body: JSON.stringify(payload)
+});
+} catch (e) {
+console.error("Lỗi:", e);
+}
+};
+return (
+<div className="min-h-[100dvh] w-full relative">
+<AnimatePresence mode="wait">
+{view === 'auth' && (
+<motion.div key="auth">
+<AuthView onLoginSuccess={handleLoginSuccess} />
+</motion.div>
+)}
+{view === 'lobby' && (
+<motion.div key="lobby">
+<LobbyView user={user} onLogout={handleLogout} onSelectExam={handleSelectExam} />
+</motion.div>
+)}
+{view === 'exam' && (
+<motion.div key="exam">
+<ExamView user={user} exam={selectedExam} onExamSubmit={handleExamSubmit} />
+</motion.div>
+)}
+{view === 'result' && (
+<motion.div key="result">
+<ResultView user={user} exam={selectedExam} resultData={resultData} onBackToLobby={() => setView('lobby')} />
+</motion.div>
+)}
+</AnimatePresence>
+</div>
+);
+};
+const rootElement = document.getElementById('root');
+const root = ReactDOM.createRoot(rootElement);
+root.render(<App />);
+</script>
 </body>
 </html>
