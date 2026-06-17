@@ -34,20 +34,10 @@ body {
 .timer-danger { color: #ef4444 !important; animation: pulse-red 1s infinite; }
 @keyframes pulse-red { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
 
-.focus-active .sidebar-panel { display: none !important; }
 .focus-active .mobile-toggle-btn { display: none !important; }
 .material-icons { display: inline-flex; align-items: center; justify-content: center; vertical-align: middle; }
 
-/* CSS Tùy biến cho khung làm bài Mobile */
-@media (max-width: 768px) {
-    .sidebar-panel {
-        position: fixed; bottom: 0; left: 0; right: 0; z-index: 100;
-        transform: translateY(100%); transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-        height: 85dvh; border-radius: 24px 24px 0 0; box-shadow: 0 -10px 40px rgba(0,0,0,0.6);
-    }
-    .sidebar-panel.sheet-open { transform: translateY(0); }
-}
-
+/* CSS Tùy biến iframe đọc PDF */
 .pdf-container iframe { width: 100%; height: 100%; border: none; }
 </style>
 
@@ -70,7 +60,8 @@ const Icon = ({ name, size = 20, className = "" }) => {
         'minimize': 'fullscreen_exit', 'maximize': 'fullscreen', 'user': 'person', 'edit-3': 'edit',
         'clipboard-list': 'assignment', 'x': 'close', 'flag': 'flag', 'chevron-down': 'expand_more',
         'trophy': 'emoji_events', 'arrow-left': 'arrow_back', 'check-square': 'check_box',
-        'check': 'check', 'alert-triangle': 'warning', 'loader': 'hourglass_empty', 'clock': 'schedule', 'zap': 'bolt'
+        'check': 'check', 'alert-triangle': 'warning', 'loader': 'hourglass_empty', 'clock': 'schedule', 
+        'zap': 'bolt', 'drag-indicator': 'drag_indicator'
     };
     const matName = iconMap[name] || 'help';
     return <span className={`material-icons ${className}`} style={{ fontSize: size }}>{matName}</span>;
@@ -85,7 +76,6 @@ const FooterCredit = () => (
 // --- 1. MÀN HÌNH ĐĂNG NHẬP ---
 const AuthView = ({ onLoginSuccess, setUser, setView }) => {
     const [isLoading, setIsLoading] = useState(false);
-    // Đã thay đổi: Dùng state để quản lý dữ liệu form an toàn 100%
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
 
@@ -96,7 +86,7 @@ const AuthView = ({ onLoginSuccess, setUser, setView }) => {
         try {
             const res = await fetch(`${API_URL}?action=login`, {
                 method: 'POST', 
-                headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // Đã thêm giấy thông hành CORS
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                 body: JSON.stringify({username, password})
             });
             const data = await res.json();
@@ -113,7 +103,7 @@ const AuthView = ({ onLoginSuccess, setUser, setView }) => {
             <div className="w-full max-w-5xl grid md:grid-cols-2 gap-6 md:gap-8 flex-1 content-center relative z-10">
                 <div className="glass-panel p-6 md:p-10 rounded-[2rem] shadow-2xl border-t-4 border-indigo-500">
                     <h2 className="text-2xl md:text-3xl font-bold mb-2 uppercase text-white">ĐĂNG NHẬP TÀI KHOẢN</h2>
-                    <p className="text-slate-400 mb-6 md:mb-8 text-sm">Liên hệ thầy Phát nếu chưa có tài khoản</p>
+                    <p className="text-slate-400 mb-6 md:mb-8 text-sm">Liên hệ giáo viên nếu chưa có tài khoản</p>
                     <form onSubmit={handleLoginSubmit} className="space-y-4 md:space-y-5">
                         <div>
                             <label className="block text-sm font-semibold text-slate-300 mb-2">Tài khoản (SBD)</label>
@@ -168,7 +158,7 @@ const LobbyView = ({ user, onLogout, onSelectExam }) => {
         <div className="max-w-6xl mx-auto p-4 md:p-10 min-h-[100dvh] flex flex-col">
             <header className="flex justify-between items-center mb-8 border-b border-slate-800 pb-6 pt-4">
                 <div>
-                    <p className="text-indigo-400 font-semibold mb-1 text-sm md:text-base">Ây dô {user.name} đã chịu vào đây làm đề rồi à =))</p>
+                    <p className="text-indigo-400 font-semibold mb-1 text-sm md:text-base">Xin chào {user.name}, chúc bạn làm bài tốt!</p>
                     <h1 className="text-2xl md:text-4xl font-extrabold uppercase tracking-tight text-white">Danh sách đề thi</h1>
                 </div>
                 <button onClick={onLogout} className="flex items-center gap-2 p-3 md:px-6 md:py-3 bg-slate-800 hover:bg-rose-600/20 hover:text-rose-500 rounded-xl font-semibold transition-colors">
@@ -215,9 +205,55 @@ const ExamView = ({ user, exam, onExamSubmit }) => {
     const p3Questions = Array.from({length: numP3}, (_, i) => i + 1);
 
     const [isFocusMode, setIsFocusMode] = useState(false);
-    const [isMobileSheetOpen, setIsMobileSheetOpen] = useState(false);
+    const [isMobileSheetOpen, setIsMobileSheetOpen] = useState(true); // Panel mở mặc định
 
-    // Phase 1: 5 phút chuẩn bị. Phase 2: Thời gian làm bài chính thức
+    // --- LOGIC KÉO THẢ PANEL (DRAG & DROP) ---
+    const [panelPos, setPanelPos] = useState({ x: 20, y: 60 });
+    const dragInfo = useRef({ isDragging: false, startX: 0, startY: 0, initialX: 0, initialY: 0 });
+
+    useEffect(() => {
+        // Căn lề panel vào góc phải dưới màn hình khi mới vào
+        const w = window.innerWidth;
+        const h = window.innerHeight;
+        const panelW = Math.min(340, w - 20); // Width max là 340px
+        setPanelPos({ x: w - panelW - 10, y: Math.max(80, h - (h * 0.65) - 20) });
+    }, []);
+
+    const handlePointerDown = (e) => {
+        if (e.target.closest('button')) return; // Bỏ qua nếu bấm vào nút
+        dragInfo.current.isDragging = true;
+        dragInfo.current.startX = e.clientX;
+        dragInfo.current.startY = e.clientY;
+        dragInfo.current.initialX = panelPos.x;
+        dragInfo.current.initialY = panelPos.y;
+        e.target.setPointerCapture(e.pointerId);
+    };
+
+    const handlePointerMove = (e) => {
+        if (!dragInfo.current.isDragging) return;
+        const dx = e.clientX - dragInfo.current.startX;
+        const dy = e.clientY - dragInfo.current.startY;
+        
+        let newX = dragInfo.current.initialX + dx;
+        let newY = dragInfo.current.initialY + dy;
+        
+        // Giới hạn để khung không bị kéo lọt ra ngoài màn hình
+        const w = window.innerWidth;
+        const h = window.innerHeight;
+        const panelW = Math.min(340, w - 20);
+        newX = Math.max(0, Math.min(newX, w - panelW));
+        newY = Math.max(60, Math.min(newY, h - 80)); // Tránh đụng header trên cùng
+
+        setPanelPos({ x: newX, y: newY });
+    };
+
+    const handlePointerUp = (e) => {
+        dragInfo.current.isDragging = false;
+        e.target.releasePointerCapture(e.pointerId);
+    };
+    // ----------------------------------------
+
+    // Phase 1: Chuẩn bị. Phase 2: Thi
     const [phase, setPhase] = useState(1);
     const [timeLeft, setTimeLeft] = useState(300); 
 
@@ -228,7 +264,6 @@ const ExamView = ({ user, exam, onExamSubmit }) => {
     const [flaggedQuestions, setFlaggedQuestions] = useState({});
     const timerRef = useRef(null);
 
-    // Tiền xử lý link Google Drive để hiển thị trong iframe
     const getPreviewUrl = (url) => {
         if (!url) return '';
         if (url.includes('drive.google.com/file/d/')) return url.replace(/\/view.*/, '/preview');
@@ -245,17 +280,15 @@ const ExamView = ({ user, exam, onExamSubmit }) => {
         return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
     }, []);
 
-    // Hẹn giờ đa pha
     useEffect(() => {
         timerRef.current = setInterval(() => {
             setTimeLeft(prev => {
                 if (prev <= 1) {
                     clearInterval(timerRef.current);
                     if (phase === 1) {
-                        setPhase(2); 
-                        setTimeLeft(exam.duration * 60); // Chuyển sang giờ thi chính thức
+                        setPhase(2); setTimeLeft(exam.duration * 60); 
                     } else {
-                        handleSubmit(true); // Hết giờ làm bài -> Nộp tự động
+                        handleSubmit(true); 
                     }
                     return 0;
                 }
@@ -268,8 +301,6 @@ const ExamView = ({ user, exam, onExamSubmit }) => {
     const handleSubmit = (isAuto = false) => {
         if (!isAuto && !window.confirm('Bạn có chắc chắn muốn nộp bài sớm?')) return;
         clearInterval(timerRef.current);
-        
-        // Gói đáp án và gọi hàm nộp
         const studentAnswers = { p1: ansPart1, p2: ansPart2, p3: ansPart3 };
         onExamSubmit(studentAnswers, cheatCount, exam);
     };
@@ -279,16 +310,18 @@ const ExamView = ({ user, exam, onExamSubmit }) => {
     const isDanger = phase === 2 && timeLeft < 300;
 
     return (
-        <div className={`h-[100dvh] flex flex-col ${isFocusMode ? 'focus-active' : ''}`}>
-            <header className="h-14 md:h-16 bg-slate-900 border-b border-slate-800 flex items-center justify-between px-3 md:px-6 shrink-0 z-50">
+        <div className={`h-[100dvh] w-full flex flex-col bg-[#0b1121] overflow-hidden ${isFocusMode ? 'focus-active' : ''}`}>
+            {/* HEADER PHÒNG THI */}
+            <header className="h-14 md:h-16 bg-slate-900 border-b border-slate-800 flex items-center justify-between px-3 md:px-6 shrink-0 z-40 shadow-md">
                 <div className="flex items-center gap-2 md:gap-4">
-                    <button onClick={() => setIsFocusMode(!isFocusMode)} className={`p-2 rounded-lg ${isFocusMode ? 'bg-indigo-600 text-white' : 'bg-slate-800 text-slate-400'}`}><Icon name={isFocusMode ? "minimize" : "maximize"} size={18}/></button>
                     <span className="font-bold text-xs md:text-sm text-indigo-400 hidden sm:inline-block uppercase truncate max-w-[150px] md:max-w-xs">{exam.title}</span>
                 </div>
 
                 <div className="flex flex-col items-center justify-center bg-slate-800/50 border border-slate-700/50 px-4 py-1 rounded-xl min-w-[100px]">
                     <p className="text-[9px] uppercase tracking-wider text-slate-400 font-semibold">{phase === 1 ? 'Điền thông tin' : 'Thời gian làm bài'}</p>
-                    <p className={`text-sm md:text-base font-black font-mono tracking-tight ${isDanger ? 'timer-danger' : (phase === 1 ? 'timer-phase-1' : 'timer-phase-2')}`}>{minutes}:{seconds}</p>
+                    <p className={`text-sm md:text-base font-black font-mono tracking-tight flex items-center gap-1 ${isDanger ? 'timer-danger' : (phase === 1 ? 'timer-phase-1' : 'timer-phase-2')}`}>
+                        {phase === 2 && <Icon name="clock" size={14} className="animate-pulse" />} {minutes}:{seconds}
+                    </p>
                 </div>
 
                 <div className="flex items-center gap-2">
@@ -300,114 +333,134 @@ const ExamView = ({ user, exam, onExamSubmit }) => {
                 </div>
             </header>
 
-            <div className="flex-1 flex overflow-hidden relative">
-                {/* BÊN TRÁI: ĐỀ THI PDF */}
-                <div className="flex-1 h-full w-full relative z-10 bg-[#1e1e1e] p-2 md:p-6 pdf-container">
-                    {pdfUrl ? (
-                        <iframe src={pdfUrl} allow="autoplay" className="w-full h-full rounded-xl shadow-2xl"></iframe>
-                    ) : (
-                        <div className="flex flex-col items-center justify-center h-full text-slate-500">
-                            <Icon name="file-text" size={64} className="mb-4 opacity-30" />
-                            <p className="text-sm font-semibold">Đề thi không đính kèm file PDF</p>
+            {/* VÙNG CHỨA ĐỀ THI (100% CHIỀU RỘNG) */}
+            <div className="flex-1 w-full relative z-10 bg-[#1e1e1e] p-1 md:p-4 pdf-container">
+                {pdfUrl ? (
+                    <iframe src={pdfUrl} allow="autoplay" className="w-full h-full md:rounded-xl shadow-2xl bg-white"></iframe>
+                ) : (
+                    <div className="flex flex-col items-center justify-center h-full text-slate-500">
+                        <Icon name="file-text" size={64} className="mb-4 opacity-30" />
+                        <p className="text-sm font-semibold">Đề thi không đính kèm file PDF</p>
+                    </div>
+                )}
+
+                {/* NÚT MỞ PANEL NẾU BỊ ĐÓNG */}
+                {!isMobileSheetOpen && (
+                    <button onClick={() => setIsMobileSheetOpen(true)} className="mobile-toggle-btn absolute bottom-6 right-6 z-40 bg-indigo-600 hover:bg-indigo-500 text-white px-5 py-3 rounded-full shadow-[0_4px_20px_rgba(79,70,229,0.5)] font-bold flex items-center gap-2 transition-all">
+                        <Icon name="edit-3" size={18}/> Phiếu đáp án
+                    </button>
+                )}
+            </div>
+
+            {/* KHUNG TRẢ LỜI CÓ THỂ KÉO THẢ (DRAGGABLE PANEL) */}
+            <div 
+                className={`fixed z-50 flex flex-col bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl transition-opacity duration-200 ${isMobileSheetOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
+                style={{ 
+                    width: '340px', 
+                    maxWidth: 'calc(100vw - 20px)',
+                    height: '65vh', 
+                    maxHeight: '600px',
+                    left: `${panelPos.x}px`, 
+                    top: `${panelPos.y}px`
+                }}
+            >
+                {/* THANH NẮM ĐỂ KÉO */}
+                <div 
+                    className="p-3 bg-slate-800 rounded-t-2xl flex items-center justify-between border-b border-slate-700 cursor-move"
+                    style={{ touchAction: 'none' }} // Chống cuộn web khi chạm kéo trên mobile
+                    onPointerDown={handlePointerDown}
+                    onPointerMove={handlePointerMove}
+                    onPointerUp={handlePointerUp}
+                    onPointerCancel={handlePointerUp}
+                >
+                    <div className="flex items-center gap-2 pointer-events-none select-none">
+                        <Icon name="drag-indicator" className="text-slate-500" />
+                        <h3 className="font-bold text-xs uppercase tracking-wider text-slate-200">Kéo để di chuyển</h3>
+                    </div>
+                    <button onClick={() => setIsMobileSheetOpen(false)} className="p-1.5 text-slate-400 hover:text-white bg-slate-700/50 rounded-lg transition-colors">
+                        <Icon name="x" size={16}/>
+                    </button>
+                </div>
+
+                {/* FORM ĐIỀN ĐÁP ÁN BÊN TRONG */}
+                <div className="flex-1 overflow-y-auto p-4 custom-scroll space-y-6">
+                    {/* PHẦN I */}
+                    {p1Questions.length > 0 && (
+                        <div className="mb-4">
+                            <h4 className="text-xs font-bold text-indigo-400 uppercase tracking-wider mb-3 border-b border-slate-800 pb-2">Phần I: Trắc nghiệm</h4>
+                            <div className="grid grid-cols-4 gap-2">
+                                {p1Questions.map((qNum) => {
+                                    const isFlagged = flaggedQuestions[`p1_${qNum}`];
+                                    return (
+                                        <div key={qNum} className="relative flex flex-col items-center p-2 bg-slate-800/40 rounded-xl border border-slate-700/50">
+                                            <button onClick={() => setFlaggedQuestions({...flaggedQuestions, [`p1_${qNum}`]: !isFlagged})} className={`absolute top-1 right-1 ${isFlagged ? 'text-amber-400' : 'text-slate-600 hover:text-slate-400'}`}><Icon name="flag" size={12} /></button>
+                                            <span className="text-[10px] font-bold text-slate-500 mb-1.5">C.{qNum}</span>
+                                            <div className="flex flex-col gap-1 w-full justify-center">
+                                                {['A', 'B', 'C', 'D'].map(ans => (
+                                                    <button key={ans} onClick={() => setAnsPart1({...ansPart1, [qNum]: ans})} className={`w-full py-1 rounded text-[10px] font-bold transition-all ${ansPart1[qNum] === ans ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'}`}>{ans}</button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
                         </div>
                     )}
 
-                    {!isMobileSheetOpen && (
-                        <button onClick={() => setIsMobileSheetOpen(true)} className="mobile-toggle-btn md:hidden absolute bottom-6 right-6 z-40 bg-indigo-600 hover:bg-indigo-500 text-white px-5 py-3 rounded-full shadow-[0_4px_20px_rgba(79,70,229,0.5)] font-bold flex items-center gap-2 transition-all">
-                            <Icon name="edit-3" size={18}/> Điền đáp án
-                        </button>
+                    {/* PHẦN II */}
+                    {p2Questions.length > 0 && (
+                        <div className="mb-4">
+                            <h4 className="text-xs font-bold text-amber-400 uppercase tracking-wider mb-3 border-b border-slate-800 pb-2">Phần II: Đúng/Sai</h4>
+                            <div className="space-y-3">
+                                {p2Questions.map((qNum) => {
+                                    const isFlagged = flaggedQuestions[`p2_${qNum}`];
+                                    return (
+                                        <div key={qNum} className="p-3 bg-slate-800/40 rounded-xl border border-slate-700/50 relative">
+                                            <div className="flex justify-between items-center mb-2">
+                                                <span className="text-xs font-bold text-slate-400">Câu {qNum}</span>
+                                                <button onClick={() => setFlaggedQuestions({...flaggedQuestions, [`p2_${qNum}`]: !isFlagged})} className={`${isFlagged ? 'text-amber-400' : 'text-slate-600'}`}><Icon name="flag" size={12} /></button>
+                                            </div>
+                                            <div className="grid grid-cols-2 gap-2">
+                                                {['a', 'b', 'c', 'd'].map(sub => (
+                                                    <div key={sub} className="flex items-center justify-between bg-slate-900/40 px-2 py-1.5 rounded-lg border border-slate-700/30">
+                                                        <span className="text-[10px] font-bold uppercase text-slate-500">{sub}.</span>
+                                                        <div className="flex gap-1">
+                                                            <button onClick={() => setAnsPart2({...ansPart2, [qNum]: {...ansPart2[qNum], [sub]: 'Đ'}})} className={`px-2.5 py-1 rounded text-[10px] font-bold ${ansPart2[qNum]?.[sub] === 'Đ' ? 'bg-emerald-600 text-white' : 'bg-slate-800 text-slate-400'}`}>Đ</button>
+                                                            <button onClick={() => setAnsPart2({...ansPart2, [qNum]: {...ansPart2[qNum], [sub]: 'S'}})} className={`px-2.5 py-1 rounded text-[10px] font-bold ${ansPart2[qNum]?.[sub] === 'S' ? 'bg-rose-600 text-white' : 'bg-slate-800 text-slate-400'}`}>S</button>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* PHẦN III */}
+                    {p3Questions.length > 0 && (
+                        <div className="mb-4">
+                            <h4 className="text-xs font-bold text-emerald-400 uppercase tracking-wider mb-3 border-b border-slate-800 pb-2">Phần III: Trả lời ngắn</h4>
+                            <div className="grid grid-cols-1 gap-2">
+                                {p3Questions.map((qNum) => {
+                                    const isFlagged = flaggedQuestions[`p3_${qNum}`];
+                                    return (
+                                        <div key={qNum} className="flex items-center gap-2 bg-slate-800/40 p-2 rounded-xl border border-slate-700/50 relative">
+                                            <button onClick={() => setFlaggedQuestions({...flaggedQuestions, [`p3_${qNum}`]: !isFlagged})} className={`absolute top-1 right-1 ${isFlagged ? 'text-amber-400' : 'text-slate-600'}`}><Icon name="flag" size={10} /></button>
+                                            <span className="text-xs font-bold text-slate-500 w-8 text-center">C.{qNum}</span>
+                                            <input type="text" value={ansPart3[qNum] || ''} onChange={(e) => setAnsPart3({...ansPart3, [qNum]: e.target.value})} className="flex-1 bg-slate-800 border border-slate-700 px-3 py-2 rounded-lg text-xs text-white font-bold outline-none focus:border-emerald-500" placeholder="Nhập đáp án..." />
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
                     )}
                 </div>
 
-                {/* BÊN PHẢI: PHIẾU BÀI LÀM */}
-                <aside className={`sidebar-panel w-80 xl:w-90 bg-slate-900 border-l border-slate-800 flex flex-col h-full shrink-0 ${isMobileSheetOpen ? 'sheet-open' : ''}`}>
-                    <div className="p-4 border-b border-slate-800 flex items-center justify-between shrink-0 bg-slate-900/50">
-                        <div className="flex items-center gap-2">
-                            <Icon name="clipboard-list" className="text-indigo-400" />
-                            <h3 className="font-bold text-sm uppercase tracking-wider text-slate-200">Phiếu bài làm</h3>
-                        </div>
-                        <button onClick={() => setIsMobileSheetOpen(false)} className="md:hidden p-2 text-slate-400 hover:text-white bg-slate-800 rounded-lg"><Icon name="x" size={16}/></button>
-                    </div>
-
-                    <div className="flex-1 overflow-y-auto p-4 custom-scroll space-y-6 pb-24 md:pb-6">
-                        {/* PHẦN I */}
-                        {p1Questions.length > 0 && (
-                            <div className="mb-6">
-                                <h4 className="text-xs font-bold text-indigo-400 uppercase tracking-wider mb-3">Phần I: Trắc nghiệm</h4>
-                                <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-4 xl:grid-cols-5 gap-2">
-                                    {p1Questions.map((qNum) => {
-                                        const isFlagged = flaggedQuestions[`p1_${qNum}`];
-                                        return (
-                                            <div key={qNum} className="relative flex flex-col items-center p-2 bg-slate-800/40 rounded-xl border border-slate-700/50">
-                                                <button onClick={() => setFlaggedQuestions({...flaggedQuestions, [`p1_${qNum}`]: !isFlagged})} className={`absolute top-1 right-1 ${isFlagged ? 'text-amber-400' : 'text-slate-600 hover:text-slate-400'}`}><Icon name="flag" size={10} /></button>
-                                                <span className="text-[10px] font-bold text-slate-500 mb-1">C.{qNum}</span>
-                                                <div className="flex flex-col gap-1 w-full">
-                                                    {['A', 'B', 'C', 'D'].map(ans => (
-                                                        <button key={ans} onClick={() => setAnsPart1({...ansPart1, [qNum]: ans})} className={`py-1 rounded text-xs font-bold transition-all ${ansPart1[qNum] === ans ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'}`}>{ans}</button>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-                        )}
-
-                        {/* PHẦN II */}
-                        {p2Questions.length > 0 && (
-                            <div className="mb-6">
-                                <h4 className="text-xs font-bold text-amber-400 uppercase tracking-wider mb-3">Phần II: Đúng/Sai</h4>
-                                <div className="space-y-3">
-                                    {p2Questions.map((qNum) => {
-                                        const isFlagged = flaggedQuestions[`p2_${qNum}`];
-                                        return (
-                                            <div key={qNum} className="p-3 bg-slate-800/40 rounded-xl border border-slate-700/50 relative">
-                                                <div className="flex justify-between items-center mb-2">
-                                                    <span className="text-xs font-bold text-slate-400">Câu {qNum}</span>
-                                                    <button onClick={() => setFlaggedQuestions({...flaggedQuestions, [`p2_${qNum}`]: !isFlagged})} className={`${isFlagged ? 'text-amber-400' : 'text-slate-600'}`}><Icon name="flag" size={12} /></button>
-                                                </div>
-                                                <div className="grid grid-cols-4 gap-2 text-center text-[10px] text-slate-500 font-semibold mb-1">
-                                                    <div>Ý a</div><div>Ý b</div><div>Ý c</div><div>Ý d</div>
-                                                </div>
-                                                <div className="grid grid-cols-4 gap-2">
-                                                    {['a', 'b', 'c', 'd'].map(sub => (
-                                                        <div key={sub} className="flex flex-col gap-1 bg-slate-900/40 p-1 rounded-lg">
-                                                            <button onClick={() => setAnsPart2({...ansPart2, [qNum]: {...ansPart2[qNum], [sub]: 'Đ'}})} className={`py-0.5 rounded font-bold text-[10px] ${ansPart2[qNum]?.[sub] === 'Đ' ? 'bg-emerald-600 text-white' : 'bg-slate-800 text-slate-400'}`}>Đ</button>
-                                                            <button onClick={() => setAnsPart2({...ansPart2, [qNum]: {...ansPart2[qNum], [sub]: 'S'}})} className={`py-0.5 rounded font-bold text-[10px] ${ansPart2[qNum]?.[sub] === 'S' ? 'bg-rose-600 text-white' : 'bg-slate-800 text-slate-400'}`}>S</button>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-                        )}
-
-                        {/* PHẦN III */}
-                        {p3Questions.length > 0 && (
-                            <div className="mb-6">
-                                <h4 className="text-xs font-bold text-emerald-400 uppercase tracking-wider mb-3">Phần III: Điền ngắn</h4>
-                                <div className="space-y-2">
-                                    {p3Questions.map((qNum) => {
-                                        const isFlagged = flaggedQuestions[`p3_${qNum}`];
-                                        return (
-                                            <div key={qNum} className="flex items-center gap-2 bg-slate-800/40 p-2 rounded-xl border border-slate-700/50 relative">
-                                                <button onClick={() => setFlaggedQuestions({...flaggedQuestions, [`p3_${qNum}`]: !isFlagged})} className={`absolute top-1 right-1 ${isFlagged ? 'text-amber-400' : 'text-slate-600'}`}><Icon name="flag" size={10} /></button>
-                                                <span className="text-xs md:text-sm font-bold text-slate-500 w-12 text-center">C.{qNum}</span>
-                                                <input type="text" value={ansPart3[qNum] || ''} onChange={(e) => setAnsPart3({...ansPart3, [qNum]: e.target.value})} className="flex-1 bg-slate-800 border border-slate-700 p-2 rounded-lg text-xs md:text-sm text-white outline-none focus:border-emerald-500" placeholder="Đáp án..." />
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-                        )}
-                    </div>
-                    <div className="p-4 bg-slate-900/50 border-t border-slate-800 flex items-center justify-between gap-4 shrink-0">
-                        <button onClick={() => setIsMobileSheetOpen(false)} className="flex-1 md:hidden bg-slate-800 hover:bg-slate-700 py-3 rounded-xl font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 text-slate-300"><Icon name="chevron-down" size={14}/>Đóng</button>
-                        <button onClick={() => handleSubmit(false)} className="flex-1 bg-indigo-600 hover:bg-indigo-500 py-3 rounded-xl font-bold text-xs md:text-sm uppercase tracking-wider transition-colors shadow-lg shadow-indigo-600/20">Nộp bài</button>
-                    </div>
-                </aside>
+                <div className="p-3 bg-slate-900/80 border-t border-slate-800 shrink-0 rounded-b-2xl">
+                    <button onClick={() => handleSubmit(false)} className="w-full bg-indigo-600 hover:bg-indigo-500 py-3 rounded-xl font-bold text-xs uppercase tracking-wider transition-colors shadow-lg shadow-indigo-600/20 text-white">Nộp bài làm</button>
+                </div>
             </div>
         </div>
     );
@@ -429,18 +482,18 @@ const ResultView = ({ user, exam, resultData, leaderboard, onBackToLobby }) => {
                 </header>
 
                 <div className="grid grid-cols-3 gap-2 md:gap-4 mb-8">
-                    <div className="glass-panel p-4 rounded-xl text-center"><p className="text-xs text-slate-400 font-medium mb-1 uppercase">Điểm số</p><p className="text-xl md:text-3xl font-black text-indigo-400">{resultData.score}</p></div>
-                    <div className="glass-panel p-4 rounded-xl text-center"><p className="text-xs text-slate-400 font-medium mb-1 uppercase">Tổng câu đúng</p><p className="text-xl md:text-3xl font-black text-emerald-400">{resultData.correct}</p></div>
-                    <div className="glass-panel p-4 rounded-xl text-center"><p className="text-xs text-slate-400 font-medium mb-1 uppercase">Vi phạm</p><p className="text-xl md:text-3xl font-black text-rose-400">{resultData.cheat}</p></div>
+                    <div className="glass-panel p-4 rounded-xl text-center"><p className="text-[10px] md:text-xs text-slate-400 font-medium mb-1 uppercase">Điểm số</p><p className="text-xl md:text-3xl font-black text-indigo-400">{resultData.score}</p></div>
+                    <div className="glass-panel p-4 rounded-xl text-center"><p className="text-[10px] md:text-xs text-slate-400 font-medium mb-1 uppercase">Tổng đúng</p><p className="text-xl md:text-3xl font-black text-emerald-400">{resultData.correct}</p></div>
+                    <div className="glass-panel p-4 rounded-xl text-center"><p className="text-[10px] md:text-xs text-slate-400 font-medium mb-1 uppercase">Vi phạm</p><p className="text-xl md:text-3xl font-black text-rose-400">{resultData.cheat}</p></div>
                 </div>
 
                 {user.role === 'student' ? (
                     <div className="mt-8 border-t border-slate-800 pt-8">
-                        <h3 className="text-xl font-bold mb-6 text-white uppercase tracking-tight flex items-center gap-2"><Icon name="check-square" className="text-indigo-400"/> Chi tiết đáp án</h3>
+                        <h3 className="text-lg md:text-xl font-bold mb-6 text-white uppercase tracking-tight flex items-center gap-2"><Icon name="check-square" className="text-indigo-400"/> Chi tiết đáp án</h3>
                         
                         {cfg.explain_link && (
                             <div className="mb-6 p-4 bg-emerald-950/20 border border-emerald-900/50 rounded-xl text-center">
-                                <a href={cfg.explain_link} target="_blank" className="text-emerald-400 font-bold hover:underline flex items-center justify-center gap-2"><Icon name="check-circle" size={18}/> Xem File Lời Giải Chi Tiết Của Giáo Viên</a>
+                                <a href={cfg.explain_link} target="_blank" className="text-emerald-400 text-xs md:text-sm font-bold hover:underline flex items-center justify-center gap-2"><Icon name="check-circle" size={18}/> Xem File Lời Giải Chi Tiết Của Giáo Viên</a>
                             </div>
                         )}
 
@@ -448,7 +501,7 @@ const ResultView = ({ user, exam, resultData, leaderboard, onBackToLobby }) => {
                             {/* PHẦN I */}
                             {p1Questions.length > 0 && (
                                 <div>
-                                    <h4 className="text-xs font-bold text-indigo-400 uppercase tracking-wider mb-3">Phần I: Trắc nghiệm nhiều lựa chọn</h4>
+                                    <h4 className="text-xs font-bold text-indigo-400 uppercase tracking-wider mb-3">Phần I: Trắc nghiệm</h4>
                                     <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-3 lg:grid-cols-4 gap-3">
                                         {p1Questions.map((qNum) => {
                                             const sAns = resultData.details?.p1?.[qNum] || '_';
@@ -471,7 +524,7 @@ const ResultView = ({ user, exam, resultData, leaderboard, onBackToLobby }) => {
                             {/* PHẦN II */}
                             {p2Questions.length > 0 && (
                                 <div>
-                                    <h4 className="text-xs font-bold text-amber-400 uppercase tracking-wider mb-3">Phần II: Trắc nghiệm Đúng/Sai</h4>
+                                    <h4 className="text-xs font-bold text-amber-400 uppercase tracking-wider mb-3">Phần II: Đúng/Sai</h4>
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                         {p2Questions.map((qNum) => {
                                             return (
@@ -500,7 +553,7 @@ const ResultView = ({ user, exam, resultData, leaderboard, onBackToLobby }) => {
                             {/* PHẦN III */}
                             {p3Questions.length > 0 && (
                                 <div>
-                                    <h4 className="text-xs font-bold text-emerald-400 uppercase tracking-wider mb-3">Phần III: Trắc nghiệm trả lời ngắn</h4>
+                                    <h4 className="text-xs font-bold text-emerald-400 uppercase tracking-wider mb-3">Phần III: Trả lời ngắn</h4>
                                     <div className="space-y-3">
                                         {p3Questions.map((qNum) => {
                                             const sAns = resultData.details?.p3?.[qNum] || '';
@@ -537,7 +590,6 @@ const ResultView = ({ user, exam, resultData, leaderboard, onBackToLobby }) => {
                             <tr className="border-b border-slate-800 text-slate-400 text-xs uppercase font-semibold">
                                 <th className="py-3 px-4">Hạng</th>
                                 <th className="py-3 px-4">Họ và tên</th>
-                                <th className="py-3 px-4">Lớp/Nhóm</th>
                                 <th className="py-3 px-4 text-right">Điểm số</th>
                             </tr>
                         </thead>
@@ -547,20 +599,19 @@ const ResultView = ({ user, exam, resultData, leaderboard, onBackToLobby }) => {
                                 return (
                                     <tr key={index} className={`transition-colors ${isCurrentUser ? 'bg-indigo-600/10 text-indigo-300 font-medium' : 'hover:bg-slate-800/30'}`}>
                                         <td className="py-3 px-4">
-                                            {index === 0 && <span className="text-amber-400 font-bold">🥇 1</span>}
-                                            {index === 1 && <span className="text-slate-400 font-bold">🥈 2</span>}
-                                            {index === 2 && <span className="text-amber-600 font-bold">🥉 3</span>}
+                                            {index === 0 && <span className="text-amber-400 font-bold"> 🥇 1</span>}
+                                            {index === 1 && <span className="text-slate-400 font-bold"> 🥈 2</span>}
+                                            {index === 2 && <span className="text-amber-600 font-bold"> 🥉 3</span>}
                                             {index > 2 && `${index + 1}`}
                                         </td>
                                         <td className="py-3 px-4">
                                             <p className="text-sm truncate max-w-[120px] md:max-w-[200px]">{rankItem.name} {isCurrentUser && <span className="text-indigo-400 ml-1">(Bạn)</span>}</p>
                                         </td>
-                                        <td className="py-3 px-4 text-xs text-slate-500 uppercase font-semibold">{rankItem.group}</td>
                                         <td className="py-3 px-4 text-right font-bold text-slate-100">{rankItem.score}</td>
                                     </tr>
                                 );
                             })}
-                            {leaderboard.length === 0 && <tr><td colSpan="4" className="py-8 text-center text-slate-500">Đang cập nhật xếp hạng...</td></tr>}
+                            {leaderboard.length === 0 && <tr><td colSpan="3" className="py-8 text-center text-slate-500">Đang cập nhật xếp hạng...</td></tr>}
                         </tbody>
                     </table>
                 </div>
@@ -573,7 +624,7 @@ const ResultView = ({ user, exam, resultData, leaderboard, onBackToLobby }) => {
 };
 
 // ==========================================
-// APP MAIN
+// APP MAIN BỌC GIAO DIỆN
 // ==========================================
 const App = () => {
     const [view, setView] = useState('auth');
@@ -589,14 +640,12 @@ const App = () => {
         let studentRawScore = 0;
         let correctP1 = 0, correctP2 = 0, correctP3 = 0;
 
-        // Chấm P1 (0.25đ / câu)
         for(let i=1; i<=(cfg.num_p1 || 0); i++) {
             const sAns = studentAnswers.p1[i] || ''; const cAns = key.p1[i] || '';
             if (sAns && cAns && String(sAns).trim().toUpperCase() === String(cAns).trim().toUpperCase()) {
                 studentRawScore += 0.25; correctP1++;
             }
         }
-        // Chấm P2
         for(let i=1; i<=(cfg.num_p2 || 0); i++) {
             let correctSubs = 0;
             ['a','b','c','d'].forEach(sub => {
@@ -608,7 +657,6 @@ const App = () => {
             else if(correctSubs===3) studentRawScore += 0.5;
             else if(correctSubs===4) { studentRawScore += 1.0; correctP2++; }
         }
-        // Chấm P3 (0.5đ / câu)
         for(let i=1; i<=(cfg.num_p3 || 0); i++) {
             const sAns = studentAnswers.p3[i] || ''; const cAns = key.p3[i] || '';
             if (sAns && cAns && String(sAns).trim().toLowerCase() === String(cAns).trim().toLowerCase()) {
@@ -633,7 +681,7 @@ const App = () => {
         try {
             await fetch(`${API_URL}?action=submit`, {
                 method: 'POST', 
-                headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // Đã thêm giấy thông hành CORS
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                 body: JSON.stringify(payload)
             });
             const rankRes = await fetch(`${API_URL}?action=get_ranking&exam=${encodeURIComponent(exam.title)}`);
