@@ -5,35 +5,33 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>HỆ THỐNG THI TRỰC TUYẾN - PRO MOBILE</title>
 
+<!-- Tailwind CSS -->
 <script src="https://cdn.tailwindcss.com"></script>
 
+<!-- Google Material Icons -->
 <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
 
+<!-- React 18 & Babel -->
 <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
 <script src="https://unpkg.com/@babel/standalone@7.23.9/babel.min.js"></script>
 
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-
 body {
     font-family: 'Inter', sans-serif; background: #0f172a; color: #f8fafc; margin: 0; padding: 0; overflow-x: hidden;
 }
-
 .glass-panel {
     background: rgba(30, 41, 59, 0.9); backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.05);
 }
-
 .custom-scroll::-webkit-scrollbar { width: 5px; height: 5px; }
 .custom-scroll::-webkit-scrollbar-track { background: rgba(0,0,0,0.05); }
 .custom-scroll::-webkit-scrollbar-thumb { background: #475569; border-radius: 10px; }
 .custom-scroll::-webkit-scrollbar-thumb:hover { background: #64748b; }
-
 .timer-phase-1 { color: #38bdf8; }
 .timer-phase-2 { color: #fbbf24; }
 .timer-danger { color: #ef4444 !important; animation: pulse-red 1s infinite; }
 @keyframes pulse-red { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
-
 .focus-active .sidebar-panel { display: none !important; }
 .focus-active .mobile-toggle-btn { display: none !important; }
 .material-icons { display: inline-flex; align-items: center; justify-content: center; vertical-align: middle; }
@@ -47,7 +45,6 @@ body {
     }
     .sidebar-panel.sheet-open { transform: translateY(0); }
 }
-
 .pdf-container iframe { width: 100%; height: 100%; border: none; }
 </style>
 
@@ -91,7 +88,6 @@ const AuthView = ({ onLoginSuccess, setUser, setView }) => {
     const handleLoginSubmit = async (e) => {
         e.preventDefault();
         setIsLoading(true);
-
         try {
             const res = await fetch(`${API_URL}?action=login`, {
                 method: 'POST', 
@@ -155,6 +151,7 @@ const LobbyView = ({ user, onLogout, onSelectExam }) => {
             .catch(err => setLoading(false));
     }, []);
 
+    // Kiểm tra Giờ mở đề
     const isExamOpen = (cfg) => {
         if (!cfg.start_time) return true;
         const now = new Date().getTime();
@@ -162,6 +159,18 @@ const LobbyView = ({ user, onLogout, onSelectExam }) => {
         const end = cfg.end_time ? new Date(cfg.end_time).getTime() : Infinity;
         return now >= start && now <= end;
     };
+
+    // BỘ LỌC PHÂN QUYỀN LỚP/NHÓM
+    const isExamAllowed = (cfg, userGroup) => {
+        if (!cfg.target_group || cfg.target_group.trim() === '') return true;
+        const target = String(cfg.target_group).toLowerCase();
+        if (target === 'tất cả' || target === 'all') return true;
+        if (!userGroup || userGroup === 'Khách') return false; 
+        return target.includes(String(userGroup).toLowerCase());
+    };
+
+    // Lọc ra các đề thi mà học sinh được phép xem
+    const visibleExams = exams.filter(ex => isExamAllowed(ex.questions || {}, user?.group));
 
     return (
         <div className="max-w-6xl mx-auto p-4 md:p-10 min-h-[100dvh] flex flex-col">
@@ -177,7 +186,7 @@ const LobbyView = ({ user, onLogout, onSelectExam }) => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 flex-1 content-start">
                 {loading ? (
                     <div className="col-span-full text-center py-20 text-slate-500"><Icon name="loader" size={24} className="animate-spin mb-2 mx-auto" /> Đang đồng bộ...</div>
-                ) : exams.length > 0 ? exams.map(exam => {
+                ) : visibleExams.length > 0 ? visibleExams.map(exam => {
                     const cfg = exam.questions || {};
                     const open = isExamOpen(cfg);
                     return (
@@ -195,7 +204,7 @@ const LobbyView = ({ user, onLogout, onSelectExam }) => {
                             </button>
                         </div>
                     );
-                }) : (<div className="col-span-full text-center py-20 text-slate-500">Chưa có đề thi nào trên hệ thống.</div>)}
+                }) : (<div className="col-span-full text-center py-20 text-slate-500">Bạn không có đề thi nào trong khu vực này.</div>)}
             </div>
             <FooterCredit />
         </div>
@@ -214,18 +223,14 @@ const ExamView = ({ user, exam, onExamSubmit }) => {
     const p3Questions = Array.from({length: numP3}, (_, i) => i + 1);
 
     const [isFocusMode, setIsFocusMode] = useState(false);
-    
-    // Mở ở Desktop, đóng ở Mobile
     const [isMobileSheetOpen, setIsMobileSheetOpen] = useState(window.innerWidth > 768);
 
-    // --- LOGIC KÉO THẢ NÚT (DRAGGABLE BUTTON) ---
+    // LOGIC KÉO THẢ NÚT (DRAGGABLE BUTTON)
     const [btnPos, setBtnPos] = useState({ x: window.innerWidth - 170, y: window.innerHeight - 80 });
     const btnDrag = useRef({ isDragging: false, startX: 0, startY: 0, initialX: 0, initialY: 0, hasMoved: false });
 
     useEffect(() => {
-        const updatePos = () => {
-             setBtnPos({ x: window.innerWidth - 170, y: window.innerHeight - 80 });
-        };
+        const updatePos = () => setBtnPos({ x: window.innerWidth - 170, y: window.innerHeight - 80 });
         window.addEventListener('resize', updatePos);
         return () => window.removeEventListener('resize', updatePos);
     }, []);
@@ -244,44 +249,59 @@ const ExamView = ({ user, exam, onExamSubmit }) => {
         if (!btnDrag.current.isDragging) return;
         const dx = e.clientX - btnDrag.current.startX;
         const dy = e.clientY - btnDrag.current.startY;
+        if (Math.abs(dx) > 5 || Math.abs(dy) > 5) btnDrag.current.hasMoved = true;
         
-        // Cử động ngón tay dài hơn 5px mới tính là "Kéo đi", nếu không thì là "Bấm mở"
-        if (Math.abs(dx) > 5 || Math.abs(dy) > 5) {
-            btnDrag.current.hasMoved = true;
-        }
-
-        let newX = btnDrag.current.initialX + dx;
-        let newY = btnDrag.current.initialY + dy;
-        
-        // Chống lọt ra ngoài màn hình
-        const w = window.innerWidth;
-        const h = window.innerHeight;
-        newX = Math.max(0, Math.min(newX, w - 160)); 
-        newY = Math.max(60, Math.min(newY, h - 60)); 
-        
+        let newX = Math.max(0, Math.min(btnDrag.current.initialX + dx, window.innerWidth - 160)); 
+        let newY = Math.max(60, Math.min(btnDrag.current.initialY + dy, window.innerHeight - 60)); 
         setBtnPos({ x: newX, y: newY });
     };
 
     const onBtnUp = (e) => {
         btnDrag.current.isDragging = false;
         e.target.releasePointerCapture(e.pointerId);
-        // Nếu không có hành động kéo, tính là Bấm mở phiếu
-        if (!btnDrag.current.hasMoved) {
-            setIsMobileSheetOpen(true);
-        }
+        if (!btnDrag.current.hasMoved) setIsMobileSheetOpen(true);
     };
-    // ----------------------------------------
 
-    // Phase 1: 5 phút chuẩn bị. Phase 2: Thời gian làm bài chính thức
+    // QUẢN LÝ TRẠNG THÁI BÀI THI & AUTO-SAVE
+    const storageKey = `exam_draft_${exam.id}_${user.username}`;
     const [phase, setPhase] = useState(1);
     const [timeLeft, setTimeLeft] = useState(300); 
-
     const [cheatCount, setCheatCount] = useState(0);
     const [ansPart1, setAnsPart1] = useState({});
     const [ansPart2, setAnsPart2] = useState({});
     const [ansPart3, setAnsPart3] = useState({});
     const [flaggedQuestions, setFlaggedQuestions] = useState({});
     const timerRef = useRef(null);
+
+    // KHÔI PHỤC BẢN NHÁP (Lỗi mạng / F5)
+    useEffect(() => {
+        const draft = localStorage.getItem(storageKey);
+        if (draft) {
+            try {
+                const parsed = JSON.parse(draft);
+                if (window.confirm('Hệ thống phát hiện bạn có bài làm nháp trước đó. Bạn có muốn khôi phục không?')) {
+                    if (parsed.ansPart1) setAnsPart1(parsed.ansPart1);
+                    if (parsed.ansPart2) setAnsPart2(parsed.ansPart2);
+                    if (parsed.ansPart3) setAnsPart3(parsed.ansPart3);
+                    if (parsed.flaggedQuestions) setFlaggedQuestions(parsed.flaggedQuestions);
+                    if (parsed.cheatCount) setCheatCount(parsed.cheatCount);
+                    if (parsed.phase === 2 && parsed.timeLeft > 0) {
+                        setPhase(2);
+                        setTimeLeft(parsed.timeLeft);
+                    }
+                } else {
+                    localStorage.removeItem(storageKey);
+                }
+            } catch(e) {}
+        }
+    }, [exam.id, user.username]);
+
+    // TỰ ĐỘNG LƯU NHÁP
+    useEffect(() => {
+        const draftData = { ansPart1, ansPart2, ansPart3, flaggedQuestions, phase, timeLeft, cheatCount };
+        localStorage.setItem(storageKey, JSON.stringify(draftData));
+    }, [ansPart1, ansPart2, ansPart3, flaggedQuestions, phase, timeLeft, cheatCount]);
+
 
     const getPreviewUrl = (url) => {
         if (!url) return '';
@@ -290,7 +310,7 @@ const ExamView = ({ user, exam, onExamSubmit }) => {
     };
     const pdfUrl = getPreviewUrl(cfg.file_link);
 
-    // Chống gian lận
+    // CHỐNG GIAN LẬN
     useEffect(() => {
         const handleVisibilityChange = () => {
             if (document.hidden) setCheatCount(prev => prev + 1);
@@ -299,6 +319,7 @@ const ExamView = ({ user, exam, onExamSubmit }) => {
         return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
     }, []);
 
+    // HẸN GIỜ ĐA PHA
     useEffect(() => {
         timerRef.current = setInterval(() => {
             setTimeLeft(prev => {
@@ -321,6 +342,7 @@ const ExamView = ({ user, exam, onExamSubmit }) => {
     const handleSubmit = (isAuto = false) => {
         if (!isAuto && !window.confirm('Bạn có chắc chắn muốn nộp bài sớm?')) return;
         clearInterval(timerRef.current);
+        localStorage.removeItem(storageKey); // Xóa bản nháp khi đã nộp
         const studentAnswers = { p1: ansPart1, p2: ansPart2, p3: ansPart3 };
         onExamSubmit(studentAnswers, cheatCount, exam);
     };
@@ -338,14 +360,12 @@ const ExamView = ({ user, exam, onExamSubmit }) => {
                     </button>
                     <span className="font-bold text-xs md:text-sm text-indigo-400 hidden sm:inline-block uppercase truncate max-w-[150px] md:max-w-xs">{exam.title}</span>
                 </div>
-
                 <div className="flex flex-col items-center justify-center bg-slate-800/50 border border-slate-700/50 px-4 py-1 rounded-xl min-w-[100px]">
                     <p className="text-[9px] uppercase tracking-wider text-slate-400 font-semibold">{phase === 1 ? 'Điền thông tin' : 'Thời gian làm bài'}</p>
                     <p className={`text-sm md:text-base font-black font-mono tracking-tight flex items-center gap-1 ${isDanger ? 'timer-danger' : (phase === 1 ? 'timer-phase-1' : 'timer-phase-2')}`}>
                         {phase === 2 && <Icon name="clock" size={14} className="animate-pulse" />} {minutes}:{seconds}
                     </p>
                 </div>
-
                 <div className="flex items-center gap-2">
                     <div className="text-right hidden md:block">
                         <p className="text-xs font-bold text-slate-200">{user.name}</p>
@@ -354,7 +374,6 @@ const ExamView = ({ user, exam, onExamSubmit }) => {
                     <div className="bg-gradient-to-tr from-indigo-600 to-violet-500 p-2 rounded-xl shadow-lg shadow-indigo-600/20"><Icon name="user" size={16} className="text-white" /></div>
                 </div>
             </header>
-
             <div className="flex-1 flex overflow-hidden relative">
                 
                 {/* ĐỀ THI PDF */}
@@ -368,8 +387,7 @@ const ExamView = ({ user, exam, onExamSubmit }) => {
                         </div>
                     )}
                 </div>
-
-                {/* NÚT NỔI KÉO THẢ MỞ PANEL ĐÁP ÁN TRÊN MOBILE */}
+                {/* NÚT NỔI KÉO THẢ */}
                 {!isMobileSheetOpen && (
                     <div 
                         className="mobile-toggle-btn md:hidden fixed z-40 bg-indigo-600 hover:bg-indigo-500 text-white px-5 py-3 rounded-full shadow-[0_4px_20px_rgba(79,70,229,0.5)] font-bold flex items-center gap-2 cursor-move"
@@ -382,8 +400,7 @@ const ExamView = ({ user, exam, onExamSubmit }) => {
                         <Icon name="edit-3" size={18}/> Phiếu đáp án
                     </div>
                 )}
-
-                {/* PHIẾU BÀI LÀM TRƯỢT LÊN BÌNH THƯỜNG NHƯ CŨ */}
+                {/* PHIẾU BÀI LÀM */}
                 <aside className={`sidebar-panel w-full md:w-2/5 lg:w-1/3 bg-slate-900 flex flex-col transition-all duration-300 ${isMobileSheetOpen ? 'sheet-open' : ''} ${isFocusMode ? 'hidden' : 'flex'}`}>
                     <div className="p-3 md:p-4 border-b border-slate-800 flex items-center justify-between shrink-0 bg-slate-900/50">
                         <div className="flex items-center gap-2">
@@ -392,9 +409,7 @@ const ExamView = ({ user, exam, onExamSubmit }) => {
                         </div>
                         <button onClick={() => setIsMobileSheetOpen(false)} className="md:hidden p-2 text-slate-400 hover:text-white bg-slate-800 rounded-lg"><Icon name="x" size={16}/></button>
                     </div>
-
                     <div className="flex-1 overflow-y-auto p-4 custom-scroll space-y-6 pb-24 md:pb-6">
-                        {/* PHẦN I */}
                         {p1Questions.length > 0 && (
                             <div className="mb-4">
                                 <h4 className="text-xs font-bold text-indigo-400 uppercase tracking-wider mb-3 border-b border-slate-800 pb-2">Phần I: Trắc nghiệm</h4>
@@ -416,8 +431,6 @@ const ExamView = ({ user, exam, onExamSubmit }) => {
                                 </div>
                             </div>
                         )}
-
-                        {/* PHẦN II */}
                         {p2Questions.length > 0 && (
                             <div className="mb-4">
                                 <h4 className="text-xs font-bold text-amber-400 uppercase tracking-wider mb-3 border-b border-slate-800 pb-2">Phần II: Đúng/Sai</h4>
@@ -435,8 +448,8 @@ const ExamView = ({ user, exam, onExamSubmit }) => {
                                                         <div key={sub} className="flex items-center justify-between bg-slate-900/40 px-2 py-1.5 rounded-lg border border-slate-700/30">
                                                             <span className="text-[10px] font-bold uppercase text-slate-500">{sub}.</span>
                                                             <div className="flex gap-1">
-                                                                <button onClick={() => setAnsPart2({...ansPart2, [qNum]: {...ansPart2[qNum], [sub]: 'Đ'}})} className={`px-2.5 py-1 rounded text-xs font-bold ${ansPart2[qNum]?.[sub] === 'Đ' ? 'bg-emerald-600 text-white' : 'bg-slate-800 text-slate-400'}`}>Đ</button>
-                                                                <button onClick={() => setAnsPart2({...ansPart2, [qNum]: {...ansPart2[qNum], [sub]: 'S'}})} className={`px-2.5 py-1 rounded text-xs font-bold ${ansPart2[qNum]?.[sub] === 'S' ? 'bg-rose-600 text-white' : 'bg-slate-800 text-slate-400'}`}>S</button>
+                                                                <button onClick={() => setAnsPart2({...ansPart2, [qNum]: {...ansPart2[qNum], [sub]: 'Đ'}})} className={`px-2.5 py-1 rounded text-[10px] font-bold ${ansPart2[qNum]?.[sub] === 'Đ' ? 'bg-emerald-600 text-white' : 'bg-slate-800 text-slate-400'}`}>Đ</button>
+                                                                <button onClick={() => setAnsPart2({...ansPart2, [qNum]: {...ansPart2[qNum], [sub]: 'S'}})} className={`px-2.5 py-1 rounded text-[10px] font-bold ${ansPart2[qNum]?.[sub] === 'S' ? 'bg-rose-600 text-white' : 'bg-slate-800 text-slate-400'}`}>S</button>
                                                             </div>
                                                         </div>
                                                     ))}
@@ -447,8 +460,6 @@ const ExamView = ({ user, exam, onExamSubmit }) => {
                                 </div>
                             </div>
                         )}
-
-                        {/* PHẦN III */}
                         {p3Questions.length > 0 && (
                             <div className="mb-4">
                                 <h4 className="text-xs font-bold text-emerald-400 uppercase tracking-wider mb-3 border-b border-slate-800 pb-2">Phần III: Trả lời ngắn</h4>
@@ -490,13 +501,11 @@ const ResultView = ({ user, exam, resultData, leaderboard, onBackToLobby }) => {
                     <h1 className="text-2xl md:text-4xl font-black uppercase tracking-tight text-white mb-2">KẾT QUẢ BÀI LÀM</h1>
                     <p className="text-sm text-indigo-400 font-semibold uppercase">{exam.title}</p>
                 </header>
-
                 <div className="grid grid-cols-3 gap-2 md:gap-4 mb-8">
                     <div className="glass-panel p-4 rounded-xl text-center"><p className="text-[10px] md:text-xs text-slate-400 font-medium mb-1 uppercase">Điểm số</p><p className="text-xl md:text-3xl font-black text-indigo-400">{resultData.score}</p></div>
                     <div className="glass-panel p-4 rounded-xl text-center"><p className="text-[10px] md:text-xs text-slate-400 font-medium mb-1 uppercase">Tổng câu đúng</p><p className="text-xl md:text-3xl font-black text-emerald-400">{resultData.correct}</p></div>
                     <div className="glass-panel p-4 rounded-xl text-center"><p className="text-[10px] md:text-xs text-slate-400 font-medium mb-1 uppercase">Vi phạm</p><p className="text-xl md:text-3xl font-black text-rose-400">{resultData.cheat}</p></div>
                 </div>
-
                 {user.role === 'student' ? (
                     <div className="mt-8 border-t border-slate-800 pt-8">
                         <h3 className="text-lg md:text-xl font-bold mb-6 text-white uppercase tracking-tight flex items-center gap-2"><Icon name="check-square" className="text-indigo-400"/> Chi tiết đáp án</h3>
@@ -506,7 +515,6 @@ const ResultView = ({ user, exam, resultData, leaderboard, onBackToLobby }) => {
                                 <a href={cfg.explain_link} target="_blank" className="text-emerald-400 text-xs md:text-sm font-bold hover:underline flex items-center justify-center gap-2"><Icon name="check-circle" size={18}/> Xem File Lời Giải Chi Tiết Của Giáo Viên</a>
                             </div>
                         )}
-
                         <div className="space-y-6">
                             {/* PHẦN I */}
                             {p1Questions.length > 0 && (
@@ -530,7 +538,6 @@ const ResultView = ({ user, exam, resultData, leaderboard, onBackToLobby }) => {
                                     </div>
                                 </div>
                             )}
-
                             {/* PHẦN II */}
                             {p2Questions.length > 0 && (
                                 <div>
@@ -559,7 +566,6 @@ const ResultView = ({ user, exam, resultData, leaderboard, onBackToLobby }) => {
                                     </div>
                                 </div>
                             )}
-
                             {/* PHẦN III */}
                             {p3Questions.length > 0 && (
                                 <div>
@@ -591,7 +597,6 @@ const ResultView = ({ user, exam, resultData, leaderboard, onBackToLobby }) => {
                     </div>
                 )}
             </div>
-
             <div className="mt-10 glass-panel p-6 rounded-2xl">
                 <h3 className="text-lg font-bold mb-4 uppercase text-indigo-400 flex items-center gap-2"><Icon name="trophy" /> Bảng xếp hạng đề thi</h3>
                 <div className="overflow-x-auto">
@@ -626,7 +631,6 @@ const ResultView = ({ user, exam, resultData, leaderboard, onBackToLobby }) => {
                     </table>
                 </div>
             </div>
-
             <button onClick={onBackToLobby} className="w-full mt-8 bg-slate-800 hover:bg-slate-700 py-4 rounded-xl font-bold uppercase transition-colors tracking-wide flex items-center justify-center gap-2 border border-slate-700/50"><Icon name="arrow-left" size={16}/>Quay về phòng chờ</button>
             <FooterCredit />
         </div>
@@ -649,7 +653,6 @@ const App = () => {
         
         let studentRawScore = 0;
         let correctP1 = 0, correctP2 = 0, correctP3 = 0;
-
         for(let i=1; i<=(cfg.num_p1 || 0); i++) {
             const sAns = studentAnswers.p1[i] || ''; const cAns = key.p1[i] || '';
             if (sAns && cAns && String(sAns).trim().toUpperCase() === String(cAns).trim().toUpperCase()) {
@@ -673,21 +676,20 @@ const App = () => {
                 studentRawScore += 0.5; correctP3++;
             }
         }
-
         const maxPossibleRawScore = ((cfg.num_p1 || 0) * 0.25) + ((cfg.num_p2 || 0) * 1.0) + ((cfg.num_p3 || 0) * 0.5);
         let finalScore = maxPossibleRawScore > 0 ? (studentRawScore / maxPossibleRawScore) * 10 : 0;
         finalScore = parseFloat(finalScore.toFixed(2));
         const totalCorrect = correctP1 + correctP2 + correctP3;
-
+        
         const payload = {
             username: user.username, name: user.name, group: user.group,
             examTitle: exam.title, score: finalScore, correct: totalCorrect,
             cheat: `${cheatCount} lần`, details: studentAnswers
         };
-
+        
         setResultData(payload);
         setView('result');
-
+        
         try {
             await fetch(`${API_URL}?action=submit`, {
                 method: 'POST', 
